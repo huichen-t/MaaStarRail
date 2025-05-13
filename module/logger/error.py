@@ -15,8 +15,8 @@ def save_error_log(config, device):
         config: AzurLaneConfig object
         device: Device object
     """
-    from module.base.utils import save_image
-    from module.handler.sensitive_info import (handle_sensitive_image, handle_sensitive_logs)
+    from module.Image.ImageToolkit import save_image
+    from .sensitive_info import (handle_sensitive_image, handle_sensitive_logs)
     if config.Error_SaveError:
         folder = f'./log/error/{int(time.time() * 1000)}'
         logger.warning(f'Saving error: {folder}')

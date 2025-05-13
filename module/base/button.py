@@ -309,7 +309,7 @@ class ButtonWrapper(Resource):
         if not ps:
             return []
 
-        from module.base.utils.points import Points
+        from module.core.points import Points
         ps = Points(ps).group(threshold=threshold)
         area_list = [area_offset(self.area, p - self.area[:2]) for p in ps]
         button_list = [area_offset(self.button, p - self.area[:2]) for p in ps]

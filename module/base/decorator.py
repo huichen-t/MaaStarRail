@@ -1,3 +1,8 @@
+"""
+装饰器模块，提供各种功能装饰器。
+包括配置条件装饰器、缓存属性装饰器、函数丢弃装饰器和单次运行装饰器。
+"""
+
 import random
 import re
 from functools import wraps
@@ -8,9 +13,9 @@ T = TypeVar("T")
 
 class Config:
     """
-    Decorator that calls different function with a same name according to config.
-
-    func_list likes:
+    配置条件装饰器，根据配置条件调用不同的同名函数。
+    
+    函数列表格式示例：
     func_list = {
         'func1': [
             {'options': {'ENABLE': True}, 'func': 1},
@@ -23,10 +28,12 @@ class Config:
     @classmethod
     def when(cls, **kwargs):
         """
+        根据配置条件装饰函数
+        
         Args:
-            **kwargs: Any option in AzurLaneConfig.
+            **kwargs: AzurLaneConfig中的任何选项
 
-        Examples:
+        示例:
             @Config.when(USE_ONE_CLICK_RETIREMENT=True)
             def retire_ships(self, amount=None, rarity=None):
                 pass
@@ -55,13 +62,15 @@ class Config:
             @wraps(func)
             def wrapper(self, *args, **kwargs):
                 """
+                根据配置条件调用相应的函数
+                
                 Args:
-                    self: ModuleBase instance.
-                    *args:
-                    **kwargs:
+                    self: ModuleBase实例
+                    *args: 位置参数
+                    **kwargs: 关键字参数
                 """
                 for record in cls.func_list[name]:
-
+                    # 检查所有配置条件是否匹配
                     flag = [value is None or self.config.__getattribute__(key) == value
                             for key, value in record['options'].items()]
                     if not all(flag):
@@ -79,12 +88,11 @@ class Config:
 
 class cached_property(Generic[T]):
     """
-    cached-property from https://github.com/pydanny/cached-property
-    Add typing support
-
-    A property that is only computed once per instance and then replaces itself
-    with an ordinary attribute. Deleting the attribute resets the property.
-    Source: https://github.com/bottlepy/bottle/commit/fa7733e075da0d790d809aa3d2f53071897e6f76
+    缓存属性装饰器，添加了类型支持
+    
+    一个属性只计算一次，然后替换为普通属性。
+    删除属性会重置该属性。
+    来源: https://github.com/bottlepy/bottle/commit/fa7733e075da0d790d809aa3d2f53071897e6f76
     """
 
     def __init__(self, func: Callable[..., T]):
@@ -100,11 +108,11 @@ class cached_property(Generic[T]):
 
 def del_cached_property(obj, name):
     """
-    Delete a cached property safely.
-
+    安全删除缓存属性
+    
     Args:
-        obj:
-        name (str):
+        obj: 对象实例
+        name (str): 属性名
     """
     try:
         del obj.__dict__[name]
@@ -114,43 +122,43 @@ def del_cached_property(obj, name):
 
 def has_cached_property(obj, name):
     """
-    Check if a property is cached.
-
+    检查属性是否已缓存
+    
     Args:
-        obj:
-        name (str):
+        obj: 对象实例
+        name (str): 属性名
     """
     return name in obj.__dict__
 
 
 def set_cached_property(obj, name, value):
     """
-    Set a cached property.
-
+    设置缓存属性
+    
     Args:
-        obj:
-        name (str):
-        value:
+        obj: 对象实例
+        name (str): 属性名
+        value: 属性值
     """
     obj.__dict__[name] = value
 
 
 def function_drop(rate=0.5, default=None):
     """
-    Drop function calls to simulate random emulator stuck, for testing purpose.
-
+    函数丢弃装饰器，用于模拟随机模拟器卡死，用于测试目的
+    
     Args:
-        rate (float): 0 to 1. Drop rate.
-        default: Default value to return if dropped.
+        rate (float): 0到1之间的丢弃率
+        default: 丢弃时返回的默认值
 
-    Examples:
+    示例:
         @function_drop(0.3)
         def click(self, button, record_check=True):
             pass
 
-        30% possibility:
+        30%的可能性:
         INFO | Dropped: module.device.device.Device.click(REWARD_GOTO_MAIN, record_check=True)
-        70% possibility:
+        70%的可能性:
         INFO | Click (1091,  628) @ REWARD_GOTO_MAIN
     """
     from module.logger import logger
@@ -180,9 +188,9 @@ def function_drop(rate=0.5, default=None):
 
 def run_once(f):
     """
-    Run a function only once, no matter how many times it has been called.
-
-    Examples:
+    单次运行装饰器，确保函数只运行一次，无论被调用多少次
+    
+    示例:
         @run_once
         def my_function(foo, bar):
             return foo + bar
@@ -190,7 +198,7 @@ def run_once(f):
         while 1:
             my_function()
 
-    Examples:
+    示例:
         def my_function(foo, bar):
             return foo + bar
 
