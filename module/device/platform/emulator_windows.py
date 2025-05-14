@@ -268,7 +268,7 @@ class Emulator(EmulatorBase):
                 res = regex.match(folder)
                 if not res:
                     continue
-                # LDPlayer has no forward port config in .vbox file
+                # LDPlayer has no forward port config_src in .vbox file
                 # Ports are auto increase, 5555, 5557, 5559, etc
                 port = int(res.group(1)) * 2 + 5555
                 yield EmulatorInstance(
@@ -306,7 +306,7 @@ class Emulator(EmulatorBase):
                             name=name,
                             path=self.path,
                         )
-                    # Fix for MuMu12 v4.0.4, default instance of which has no forward record in vbox config
+                    # Fix for MuMu12 v4.0.4, default instance of which has no forward record in vbox config_src
                     else:
                         instance = EmulatorInstance(
                             serial=serial,

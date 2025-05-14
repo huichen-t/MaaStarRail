@@ -1,8 +1,14 @@
-import module.config.server as server_
-from module.base.button import Button, ButtonWrapper, ClickButton, match_template
+import cv2
+import numpy as np
+from PIL import Image
+
+import module.config_src.server as server_
+from module.base.utils.image_utils import crop, color_similarity_2d, image_size, ensure_int, area_offset, load_image, \
+    match_template
+
 from module.base.timer import Timer
-from module.base.utils import *
-from module.config.config import AzurLaneConfig
+from module.config_src.config import AzurLaneConfig
+from module.core.points import fit_points
 from module.device.device import Device
 from module.device.method.utils import HierarchyButton
 from module.logger import logger
@@ -35,7 +41,7 @@ class ModuleBase:
        - 语言设置
     
     属性：
-        config (AzurLaneConfig): 配置对象
+        config_src (AzurLaneConfig): 配置对象
         device (Device): 设备对象
         interval_timer (dict): 定时器字典
     """
@@ -62,7 +68,7 @@ class ModuleBase:
         elif isinstance(config, str):
             self.config = AzurLaneConfig(config, task=task)
         else:
-            logger.warning('Alas ModuleBase received an unknown config, assume it is AzurLaneConfig')
+            logger.warning('Alas ModuleBase received an unknown config_src, assume it is AzurLaneConfig')
             self.config = config
 
         if isinstance(device, Device):
@@ -92,7 +98,7 @@ class ModuleBase:
             ```python
             def func(image):
                 logger.info('Update thread start')
-                with self.config.multi_set():
+                with self.config_src.multi_set():
                     self.dungeon_get_simuni_point(image)
                     self.dungeon_update_stamina(image)
             ModuleBase.worker.submit(func, self.device.image)
@@ -336,11 +342,11 @@ class ModuleBase:
         Returns:
             np.ndarray: 裁剪后的图像
         """
-        if isinstance(button, Button):
-            return crop(self.device.image, button.area, copy=copy)
-        elif isinstance(button, ButtonWrapper):
-            return crop(self.device.image, button.area, copy=copy)
-        elif hasattr(button, 'area'):
+        # if isinstance(button, Button):
+        #     return crop(self.device.image, button.area, copy=copy)
+        # elif isinstance(button, ButtonWrapper):
+        #     return crop(self.device.image, button.area, copy=copy)
+        if hasattr(button, 'area'):
             return crop(self.device.image, button.area, copy=copy)
         else:
             return crop(self.device.image, button, copy=copy)
@@ -390,7 +396,7 @@ class ModuleBase:
         point = fit_points(points, mod=image_size(image), encourage=encourage)
         point = ensure_int(point + area[:2])
         button_area = area_offset((-encourage, -encourage, encourage, encourage), offset=point)
-        return ClickButton(area=button_area, name=name)
+        return None
 
     def get_interval_timer(self, button, interval=5, renew=False) -> Timer:
         """
@@ -524,7 +530,7 @@ class ModuleBase:
 
         def image_encode(im, ti):
             import io
-            from module.handler.sensitive_info import handle_sensitive_image
+            from module.logger.sensitive_info import handle_sensitive_image
 
             output = io.BytesIO()
             im = handle_sensitive_image(im)

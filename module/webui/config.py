@@ -7,7 +7,7 @@ class DeployConfig(_DeployConfig):
 
     def __setattr__(self, key: str, value):
         """
-        Catch __setattr__, copy to `self.config`, write deploy config.
+        Catch __setattr__, copy to `self.config_src`, write deploy config_src.
         """
         super().__setattr__(key, value)
         if key[0].isupper() and key in self.config:

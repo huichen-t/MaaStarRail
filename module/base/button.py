@@ -1,4 +1,4 @@
-import module.config.server as server
+import module.config_src.server as server
 from module.base.decorator import cached_property, del_cached_property
 from module.base.resource import Resource
 from module.base.utils import *

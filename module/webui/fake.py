@@ -1,4 +1,4 @@
-from module.config.config import AzurLaneConfig
+from module.config_src.config import AzurLaneConfig
 
 """
 Return default values, since submodules shouldn't have nested submodules

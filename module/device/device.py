@@ -1,13 +1,24 @@
+"""
+设备管理模块。
+提供设备控制、截图、应用管理等功能的统一接口。
+包括：
+- 设备初始化和管理
+- 截图方法管理
+- 控制方法管理
+- 应用管理
+- 状态监控和错误处理
+"""
+
 import collections
 import itertools
 
 from lxml import etree
 
 from module.device.env import IS_WINDOWS
-# Patch pkg_resources before importing adbutils and uiautomator2
+# 在导入adbutils和uiautomator2之前修补pkg_resources
 from module.device.pkg_resources import get_distribution
 
-# Just avoid being removed by import optimization
+# 避免被导入优化移除
 _ = get_distribution
 
 from module.base.timer import Timer
@@ -26,6 +37,9 @@ from module.logger import logger
 
 def show_function_call():
     """
+    显示函数调用栈。
+    用于调试时显示当前执行路径。
+    输出格式示例：
     INFO     21:07:31.554 │ Function calls:
                        <string>   L1 <module>
                    spawn.py L116 spawn_main()
@@ -65,12 +79,27 @@ def show_function_call():
 
 
 class Device(Screenshot, Control, AppControl):
-    _screen_size_checked = False
-    detect_record = set()
-    click_record = collections.deque(maxlen=30)
-    stuck_timer = Timer(60, count=60).start()
+    """
+    设备管理类。
+    继承自Screenshot、Control和AppControl，提供统一的设备管理接口。
+    负责：
+    - 设备初始化和管理
+    - 截图方法管理
+    - 控制方法管理
+    - 应用管理
+    - 状态监控和错误处理
+    """
+    _screen_size_checked = False  # 屏幕尺寸检查标志
+    detect_record = set()  # 检测记录集合
+    click_record = collections.deque(maxlen=30)  # 点击记录队列，最多记录30次
+    stuck_timer = Timer(60, count=60).start()  # 卡住检测计时器
 
     def __init__(self, *args, **kwargs):
+        """
+        初始化设备。
+        尝试连接设备，如果失败则重试最多3次。
+        如果仍然失败，则请求人工干预。
+        """
         for trial in range(4):
             try:
                 super().__init__(*args, **kwargs)
@@ -79,7 +108,7 @@ class Device(Screenshot, Control, AppControl):
                 if trial >= 3:
                     logger.critical('Failed to start emulator after 3 trial')
                     raise RequestHumanTakeover
-                # Try to start emulator
+                # 尝试启动模拟器
                 if self.emulator_instance is not None:
                     self.emulator_start()
                 else:
@@ -89,18 +118,18 @@ class Device(Screenshot, Control, AppControl):
                     )
                     raise RequestHumanTakeover
 
-        # Auto-fill emulator info
+        # 自动填充模拟器信息
         if IS_WINDOWS and self.config.EmulatorInfo_Emulator == 'auto':
             _ = self.emulator_instance
 
         self.screenshot_interval_set()
         self.method_check()
 
-        # Auto-select the fastest screenshot method
+        # 自动选择最快的截图方法
         if not self.config.is_template_config and self.config.Emulator_ScreenshotMethod == 'auto':
             self.run_simple_screenshot_benchmark()
 
-        # Early init
+        # 早期初始化
         if self.config.is_actual_task:
             if self.config.Emulator_ControlMethod == 'MaaTouch':
                 self.early_maatouch_init()
@@ -109,34 +138,27 @@ class Device(Screenshot, Control, AppControl):
 
     def run_simple_screenshot_benchmark(self):
         """
-        Perform a screenshot method benchmark, test 3 times on each method.
-        The fastest one will be set into config.
+        执行截图方法基准测试。
+        对每种方法测试3次，选择最快的方法。
+        将最快的方法设置到config_src中。
         """
         logger.info('run_simple_screenshot_benchmark')
-        # Check resolution first
+        # 首先检查分辨率
         self.resolution_check_uiautomator2()
-        # Perform benchmark
+        # 执行基准测试
         from module.daemon.benchmark import Benchmark
         bench = Benchmark(config=self.config, device=self)
         method = bench.run_simple_screenshot_benchmark()
-        # Set
+        # 设置
         with self.config.multi_set():
             self.config.Emulator_ScreenshotMethod = method
-            # if method == 'nemu_ipc':
-            #     self.config.Emulator_ControlMethod = 'nemu_ipc'
 
     def method_check(self):
         """
-        Check combinations of screenshot method and control methods
+        检查截图方法和控制方法的组合。
+        确保使用兼容的方法组合。
         """
-        # nemu_ipc should be together
-        # if self.config.Emulator_ScreenshotMethod == 'nemu_ipc' and self.config.Emulator_ControlMethod != 'nemu_ipc':
-        #     logger.warning('When using nemu_ipc, both screenshot and control should use nemu_ipc')
-        #     self.config.Emulator_ControlMethod = 'nemu_ipc'
-        # if self.config.Emulator_ScreenshotMethod != 'nemu_ipc' and self.config.Emulator_ControlMethod == 'nemu_ipc':
-        #     logger.warning('When not using nemu_ipc, both screenshot and control should not use nemu_ipc')
-        #     self.config.Emulator_ControlMethod = 'minitouch'
-        # Allow Hermit on VMOS only
+        # 允许Hermit仅在VMOS上使用
         if self.config.Emulator_ControlMethod == 'Hermit' and not self.is_vmos:
             logger.warning('ControlMethod Hermit is allowed on VMOS only')
             self.config.Emulator_ControlMethod = 'MaaTouch'
@@ -145,7 +167,7 @@ class Device(Screenshot, Control, AppControl):
             logger.warning('Use MaaTouch on ldplayer')
             self.config.Emulator_ControlMethod = 'MaaTouch'
 
-        # Fallback to auto if nemu_ipc and ldopengl are selected on non-corresponding emulators
+        # 如果在不支持的模拟器上选择了nemu_ipc或ldopengl，回退到auto
         if self.config.Emulator_ScreenshotMethod == 'nemu_ipc':
             if not (self.is_emulator and self.is_mumu_family):
                 logger.warning('ScreenshotMethod nemu_ipc is available on MuMu Player 12 only, fallback to auto')
@@ -157,8 +179,11 @@ class Device(Screenshot, Control, AppControl):
 
     def screenshot(self):
         """
+        获取屏幕截图。
+        检查是否卡住，如果卡住则抛出异常。
+        
         Returns:
-            np.ndarray:
+            np.ndarray: 屏幕截图
         """
         self.stuck_record_check()
 
@@ -175,12 +200,22 @@ class Device(Screenshot, Control, AppControl):
         return self.image
 
     def dump_hierarchy(self) -> etree._Element:
+        """
+        获取界面层级结构。
+        检查是否卡住，如果卡住则抛出异常。
+        
+        Returns:
+            etree._Element: 界面层级结构
+        """
         self.stuck_record_check()
         return super().dump_hierarchy()
 
     def release_during_wait(self):
-        # Scrcpy server is still sending video stream,
-        # stop it during wait
+        """
+        在等待期间释放资源。
+        停止scrcpy服务器和nemu_ipc。
+        """
+        # Scrcpy服务器仍在发送视频流，在等待期间停止它
         if self.config.Emulator_ScreenshotMethod == 'scrcpy':
             self._scrcpy_server_stop()
         if self.config.Emulator_ScreenshotMethod == 'nemu_ipc':
@@ -188,7 +223,11 @@ class Device(Screenshot, Control, AppControl):
 
     def get_orientation(self):
         """
-        Callbacks when orientation changed.
+        获取屏幕方向。
+        当方向改变时触发回调。
+        
+        Returns:
+            int: 屏幕方向
         """
         o = super().get_orientation()
 
@@ -197,16 +236,29 @@ class Device(Screenshot, Control, AppControl):
         return o
 
     def stuck_record_add(self, button):
+        """
+        添加卡住检测记录。
+        
+        Args:
+            button: 按钮对象
+        """
         self.detect_record.add(str(button))
 
     def stuck_record_clear(self):
+        """
+        清除卡住检测记录。
+        重置检测记录集合和计时器。
+        """
         self.detect_record = set()
         self.stuck_timer.reset()
 
     def stuck_record_check(self):
         """
+        检查是否卡住。
+        如果等待时间过长，抛出GameStuckError异常。
+        
         Raises:
-            GameStuckError:
+            GameStuckError: 当等待时间过长时抛出
         """
         reached = self.stuck_timer.reached()
         if not reached:
@@ -223,25 +275,41 @@ class Device(Screenshot, Control, AppControl):
             raise GameNotRunningError('Game died')
 
     def handle_control_check(self, button):
+        """
+        处理控制检查。
+        清除卡住记录，添加点击记录，检查点击记录。
+        
+        Args:
+            button: 按钮对象
+        """
         self.stuck_record_clear()
         self.click_record_add(button)
         self.click_record_check()
 
     def click_record_add(self, button):
+        """
+        添加点击记录。
+        
+        Args:
+            button: 按钮对象
+        """
         self.click_record.append(str(button))
 
     def click_record_clear(self):
+        """
+        清除点击记录。
+        """
         self.click_record.clear()
 
     def click_record_remove(self, button):
         """
-        Remove a button from `click_record`
-
+        从点击记录中移除按钮。
+        
         Args:
-            button (Button):
-
+            button (Button): 要移除的按钮
+            
         Returns:
-            int: Number of button removed
+            int: 移除的按钮数量
         """
         removed = 0
         for _ in range(self.click_record.maxlen):
@@ -249,20 +317,23 @@ class Device(Screenshot, Control, AppControl):
                 self.click_record.remove(str(button))
                 removed += 1
             except ValueError:
-                # Value not in queue
+                # 值不在队列中
                 break
 
         return removed
 
     def click_record_check(self):
         """
+        检查点击记录。
+        如果点击次数过多，抛出GameTooManyClickError异常。
+        
         Raises:
-            GameTooManyClickError:
+            GameTooManyClickError: 当点击次数过多时抛出
         """
         first15 = itertools.islice(self.click_record, 0, 15)
         count = collections.Counter(first15).most_common(2)
         if count[0][1] >= 12:
-            # Allow more clicks in Ruan Mei event
+            # 在阮梅事件中允许更多点击
             if 'CHOOSE_OPTION_CONFIRM' in self.click_record and 'BLESSING_CONFIRM' in self.click_record:
                 count = collections.Counter(self.click_record).most_common(2)
                 if count[0][0] == 'BLESSING_CONFIRM' and count[0][1] < 25:
@@ -281,7 +352,8 @@ class Device(Screenshot, Control, AppControl):
 
     def disable_stuck_detection(self):
         """
-        Disable stuck detection and its handler. Usually uses in semi auto and debugging.
+        禁用卡住检测及其处理程序。
+        通常用于半自动和调试。
         """
         logger.info('Disable stuck detection')
 
@@ -292,11 +364,19 @@ class Device(Screenshot, Control, AppControl):
         self.stuck_record_check = empty_function
 
     def app_start(self):
+        """
+        启动应用。
+        清除卡住记录和点击记录。
+        """
         super().app_start()
         self.stuck_record_clear()
         self.click_record_clear()
 
     def app_stop(self):
+        """
+        停止应用。
+        清除卡住记录和点击记录。
+        """
         super().app_stop()
         self.stuck_record_clear()
         self.click_record_clear()

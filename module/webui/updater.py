@@ -249,7 +249,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         if self.update():
             if State.restart_event is not None:
                 self.state = "reload"
-                with open("./config/reloadalas", mode="w") as f:
+                with open("./config_src/reloadalas", mode="w") as f:
                     f.writelines(names)
                 from module.webui.app import clearup
 
@@ -267,7 +267,7 @@ class Updater(DeployConfig, GitManager, PipManager):
     @staticmethod
     def _trigger_reload(delay=2):
         def trigger():
-            # with open("./config/reloadflag", mode="w"):
+            # with open("./config_src/reloadflag", mode="w"):
             #     # app ended here and uvicorn will restart whole app
             #     pass
             State.restart_event.set()

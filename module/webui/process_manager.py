@@ -142,7 +142,7 @@ class ProcessManager:
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
 
-        from module.config.config import AzurLaneConfig
+        from module.config_src.config import AzurLaneConfig
 
         AzurLaneConfig.stop_event = e
         try:
@@ -197,7 +197,7 @@ class ProcessManager:
                 _instances.add(instance)
 
         try:
-            with open("./config/reloadalas", mode="r") as f:
+            with open("./config_src/reloadalas", mode="r") as f:
                 for line in f.readlines():
                     line = line.strip()
                     _instances.add(ProcessManager.get_manager(line))
@@ -209,7 +209,7 @@ class ProcessManager:
             process.start(func=get_config_mod(process.config_name), ev=ev)
 
         try:
-            os.remove("./config/reloadalas")
+            os.remove("./config_src/reloadalas")
         except:
             pass
         logger.info("Start alas complete")

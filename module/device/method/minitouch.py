@@ -441,7 +441,7 @@ class Minitouch(Connection):
         self._minitouch_port = self.adb_forward("localabstract:minitouch")
 
         # No need, minitouch already started by uiautomator2
-        # self.adb_shell([self.config.MINITOUCH_FILEPATH_REMOTE])
+        # self.adb_shell([self.config_src.MINITOUCH_FILEPATH_REMOTE])
 
         retry_timeout = Timer(2).start()
         while 1:

@@ -17,7 +17,7 @@ from subprocess import PIPE, Popen
 from typing import TYPE_CHECKING
 
 from module.logger import logger
-from module.config.utils import random_id
+from module.config_src.utils import random_id
 from module.webui.setting import State
 
 if TYPE_CHECKING:

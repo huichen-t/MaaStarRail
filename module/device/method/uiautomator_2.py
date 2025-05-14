@@ -1,15 +1,23 @@
+"""
+uiautomator2控制模块。
+提供通过uiautomator2控制Android设备的功能。
+uiautomator2是Google提供的UI自动化测试框架，可以用于控制Android设备。
+"""
+
 import time
 from dataclasses import dataclass
 from functools import wraps
 from json.decoder import JSONDecodeError
 from subprocess import list2cmdline
 
+import cv2
+import numpy as np
 import uiautomator2 as u2
 from adbutils.errors import AdbError
 from lxml import etree
 
 from module.base.utils import *
-from module.config.server import DICT_PACKAGE_TO_ACTIVITY
+from module.config_src.server import DICT_PACKAGE_TO_ACTIVITY
 from module.device.connection import Connection
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, possible_reasons, retry_sleep)
@@ -18,6 +26,25 @@ from module.logger import logger
 
 
 def retry(func):
+    """
+    重试装饰器。
+    当函数执行失败时自动重试，最多重试RETRY_TRIES次。
+    处理各种异常情况：
+    - ADB连接重置
+    - JSON解码错误
+    - ADB错误
+    - 运行时错误
+    - 断言错误
+    - 包未安装
+    - 图像截取错误
+    - 其他未知错误
+    
+    Args:
+        func: 需要重试的函数
+        
+    Returns:
+        装饰后的函数
+    """
     @wraps(func)
     def retry_wrapper(self, *args, **kwargs):
         """
@@ -101,23 +128,46 @@ def retry(func):
 
 @dataclass
 class ProcessInfo:
-    pid: int
-    ppid: int
-    thread_count: int
-    cmdline: str
-    name: str
+    """
+    进程信息数据类。
+    用于存储进程的详细信息。
+    """
+    pid: int  # 进程ID
+    ppid: int  # 父进程ID
+    thread_count: int  # 线程数
+    cmdline: str  # 命令行
+    name: str  # 进程名称
 
 
 @dataclass
 class ShellBackgroundResponse:
-    success: bool
-    pid: int
-    description: str
+    """
+    后台Shell命令响应数据类。
+    用于存储后台Shell命令的执行结果。
+    """
+    success: bool  # 是否成功
+    pid: int  # 进程ID
+    description: str  # 描述信息
 
 
 class Uiautomator2(Connection):
+    """
+    uiautomator2控制类。
+    提供通过uiautomator2控制Android设备的各种功能。
+    继承自Connection类，实现设备连接的基础功能。
+    """
+
     @retry
     def screenshot_uiautomator2(self):
+        """
+        通过uiautomator2获取屏幕截图。
+        
+        Returns:
+            np.ndarray: 屏幕截图数据
+            
+        Raises:
+            ImageTruncated: 当图像数据无效时抛出
+        """
         image = self.u2.screenshot(format='raw')
         image = np.frombuffer(image, np.uint8)
         if image is None:
@@ -135,23 +185,47 @@ class Uiautomator2(Connection):
 
     @retry
     def click_uiautomator2(self, x, y):
+        """
+        执行点击操作。
+        
+        Args:
+            x: 点击位置的x坐标
+            y: 点击位置的y坐标
+        """
         self.u2.click(x, y)
 
     @retry
     def long_click_uiautomator2(self, x, y, duration=(1, 1.2)):
+        """
+        执行长按操作。
+        
+        Args:
+            x: 长按位置的x坐标
+            y: 长按位置的y坐标
+            duration: 长按持续时间范围（秒）
+        """
         self.u2.long_click(x, y, duration=duration)
 
     @retry
     def swipe_uiautomator2(self, p1, p2, duration=0.1):
+        """
+        执行滑动操作。
+        
+        Args:
+            p1: 起始点坐标
+            p2: 结束点坐标
+            duration: 滑动持续时间（秒）
+        """
         self.u2.swipe(*p1, *p2, duration=duration)
 
     @retry
     def _drag_along(self, path):
-        """Swipe following path.
-
+        """
+        沿指定路径执行拖拽操作。
+        
         Args:
-            path (list): (x, y, sleep)
-
+            path: 路径点列表，每个点包含(x, y, sleep)信息
+            
         Examples:
             al.drag_along([
                 (403, 421, 0.2),
@@ -160,7 +234,7 @@ class Uiautomator2(Connection):
                 (821, 326+10, 0.1),
                 (821, 326, 0),
             ])
-            Equals to:
+            等同于:
             al.device.touch.down(403, 421)
             time.sleep(0.2)
             al.device.touch.move(821, 326)
@@ -187,22 +261,20 @@ class Uiautomator2(Connection):
 
     def drag_uiautomator2(self, p1, p2, segments=1, shake=(0, 15), point_random=(-10, -10, 10, 10),
                           shake_random=(-5, -5, 5, 5), swipe_duration=0.25, shake_duration=0.1):
-        """Drag and shake, like:
-                     /\
-        +-----------+  +  +
-                        \/
-        A simple swipe or drag don't work well, because it only has two points.
-        Add some way point to make it more like swipe.
-
+        """
+        执行拖拽和抖动操作。
+        简单的滑动或拖拽可能效果不好，因为只有两个点。
+        添加一些中间点使其更像滑动。
+        
         Args:
-            p1 (tuple): Start point, (x, y).
-            p2 (tuple): End point, (x, y).
-            segments (int):
-            shake (tuple): Shake after arrive end point.
-            point_random: Add random to start point and end point.
-            shake_random: Add random to shake array.
-            swipe_duration: Duration between way points.
-            shake_duration: Duration between shake points.
+            p1: 起始点坐标
+            p2: 结束点坐标
+            segments: 分段数
+            shake: 到达终点后的抖动范围
+            point_random: 起始点和终点添加的随机偏移范围
+            shake_random: 抖动点添加的随机偏移范围
+            swipe_duration: 路径点之间的持续时间
+            shake_duration: 抖动点之间的持续时间
         """
         p1 = np.array(p1) - random_rectangle_point(point_random)
         p2 = np.array(p2) - random_rectangle_point(point_random)
@@ -218,8 +290,10 @@ class Uiautomator2(Connection):
     @retry
     def app_current_uiautomator2(self):
         """
+        获取当前运行的应用包名。
+        
         Returns:
-            str: Package name.
+            str: 当前运行的应用包名
         """
         result = self.u2.app_current()
         return result['package']
@@ -227,15 +301,17 @@ class Uiautomator2(Connection):
     @retry
     def _app_start_u2_monkey(self, package_name=None, allow_failure=False):
         """
+        通过monkey命令启动应用。
+        
         Args:
-            package_name (str):
-            allow_failure (bool):
-
+            package_name: 要启动的应用包名
+            allow_failure: 是否允许启动失败
+            
         Returns:
-            bool: If success to start
-
+            bool: 是否成功启动
+            
         Raises:
-            PackageNotInstalled:
+            PackageNotInstalled: 当应用未安装时抛出
         """
         if not package_name:
             package_name = self.package
@@ -261,16 +337,18 @@ class Uiautomator2(Connection):
     @retry
     def _app_start_u2_am(self, package_name=None, activity_name=None, allow_failure=False):
         """
+        通过am命令启动应用。
+        
         Args:
-            package_name (str):
-            activity_name (str):
-            allow_failure (bool):
-
+            package_name: 要启动的应用包名
+            activity_name: 要启动的Activity名称
+            allow_failure: 是否允许启动失败
+            
         Returns:
-            bool: If success to start
-
+            bool: 是否成功启动
+            
         Raises:
-            PackageNotInstalled:
+            PackageNotInstalled: 当应用未安装时抛出
         """
         if not package_name:
             package_name = self.package
@@ -335,21 +413,22 @@ class Uiautomator2(Connection):
     # @retry
     def app_start_uiautomator2(self, package_name=None, activity_name=None, allow_failure=False):
         """
+        启动应用。
+        尝试多种方法启动应用：
+        1. 使用am命令启动指定Activity
+        2. 使用monkey命令启动
+        3. 再次尝试使用am命令启动
+        
         Args:
-            package_name (str):
-                If None, to get from config
-            activity_name (str):
-                If None, to get from DICT_PACKAGE_TO_ACTIVITY
-                If still None, launch from monkey
-                If monkey failed, fetch activity name and launch from am
-            allow_failure (bool):
-                True for no PackageNotInstalled raising, just return False
-
+            package_name: 要启动的应用包名
+            activity_name: 要启动的Activity名称
+            allow_failure: 是否允许启动失败
+            
         Returns:
-            bool: If success to start
-
+            bool: 是否成功启动
+            
         Raises:
-            PackageNotInstalled:
+            PackageNotInstalled: 当应用未安装时抛出
         """
         if not package_name:
             package_name = self.package
@@ -369,18 +448,34 @@ class Uiautomator2(Connection):
 
     @retry
     def app_stop_uiautomator2(self, package_name=None):
+        """
+        停止应用。
+        
+        Args:
+            package_name: 要停止的应用包名
+        """
         if not package_name:
             package_name = self.package
         self.u2.app_stop(package_name)
 
     @retry
     def dump_hierarchy_uiautomator2(self) -> etree._Element:
+        """
+        获取界面层级结构。
+        
+        Returns:
+            etree._Element: 界面层级树
+        """
         content = self.u2.dump_hierarchy(compressed=False)
         # print(content)
         hierarchy = etree.fromstring(content.encode('utf-8'))
         return hierarchy
 
     def uninstall_uiautomator2(self):
+        """
+        卸载uiautomator2相关文件。
+        删除设备上的uiautomator2相关文件。
+        """
         logger.info('Removing uiautomator2')
         for file in [
             'app-uiautomator.apk',
@@ -394,10 +489,14 @@ class Uiautomator2(Connection):
     @retry
     def resolution_uiautomator2(self, cal_rotation=True) -> t.Tuple[int, int]:
         """
-        Faster u2.window_size(), cause that calls `dumpsys display` twice.
-
+        获取设备分辨率。
+        比u2.window_size()更快，因为后者会调用两次`dumpsys display`。
+        
+        Args:
+            cal_rotation: 是否计算旋转
+            
         Returns:
-            (width, height)
+            (width, height): 屏幕宽度和高度
         """
         info = self.u2.http.get('/info').json()
         w, h = info['display']['width'], info['display']['height']
@@ -409,14 +508,15 @@ class Uiautomator2(Connection):
 
     def resolution_check_uiautomator2(self):
         """
-        Alas does not actively check resolution but the width and height of screenshots.
-        However, some screenshot methods do not provide device resolution, so check it here.
-
+        检查设备分辨率。
+        Alas不会主动检查分辨率，而是检查截图的宽度和高度。
+        但是某些截图方法不提供设备分辨率，所以在这里检查。
+        
         Returns:
-            (width, height)
-
+            (width, height): 屏幕宽度和高度
+            
         Raises:
-            RequestHumanTakeover: If resolution is not 1280x720
+            RequestHumanTakeover: 当分辨率不是1280x720时抛出
         """
         width, height = self.resolution_uiautomator2()
         logger.attr('Screen_size', f'{width}x{height}')
@@ -432,7 +532,10 @@ class Uiautomator2(Connection):
     @retry
     def proc_list_uiautomator2(self) -> t.List[ProcessInfo]:
         """
-        Get info about current processes.
+        获取当前进程信息列表。
+        
+        Returns:
+            List[ProcessInfo]: 进程信息列表
         """
         resp = self.u2.http.get("/proc/list", timeout=10)
         resp.raise_for_status()
@@ -450,10 +553,17 @@ class Uiautomator2(Connection):
     @retry
     def u2_shell_background(self, cmdline, timeout=10) -> ShellBackgroundResponse:
         """
-        Run at background.
-
-        Note that this function will always return a success response,
-        as this is a untested and hidden method in ATX.
+        在后台运行Shell命令。
+        
+        注意：这个函数总是返回成功响应，
+        因为这是ATX中一个未测试的隐藏方法。
+        
+        Args:
+            cmdline: 要执行的命令
+            timeout: 超时时间（秒）
+            
+        Returns:
+            ShellBackgroundResponse: 命令执行结果
         """
         if isinstance(cmdline, (list, tuple)):
             cmdline = list2cmdline(cmdline)

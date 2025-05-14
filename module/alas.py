@@ -6,8 +6,8 @@ import inflection
 from cached_property import cached_property
 
 from module.base.decorator import del_cached_property
-from module.config.config import AzurLaneConfig, TaskEnd
-from module.config.deep import deep_get, deep_set
+from module.config_src.config import AzurLaneConfig, TaskEnd
+from module.config_src.deep import deep_get, deep_set
 from module.exception import *
 from module.logger import logger, save_error_log
 from module.notify import handle_notify
@@ -170,7 +170,7 @@ class AzurLaneAutoScript:
             future (datetime):
 
         Returns:
-            bool: True if wait finished, False if config changed.
+            bool: True if wait finished, False if config_src changed.
         """
         future = future + timedelta(seconds=1)
         self.config.start_watching()
@@ -190,60 +190,74 @@ class AzurLaneAutoScript:
 
     def get_next_task(self):
         """
+        获取下一个任务的名称。
+        
+        该方法会根据配置文件中的任务队列，循环获取下一个任务，并执行相应的优化操作。
+        如果当前任务的下一次运行时间未到，则会根据优化策略等待。
+        
         Returns:
-            str: Name of the next task.
+            str: 下一个任务的名称。
         """
-        while 1:
+        while True:  # 循环直到找到合适的任务
+            # 从配置中获取下一个任务
             task = self.config.get_next()
-            self.config.task = task
-            self.config.bind(task)
+            self.config.task = task  # 更新当前任务
+            self.config.bind(task)  # 绑定任务到配置
 
+            # 释放与任务相关的资源
             from module.base.resource import release_resources
-            if self.config.task.command != 'Alas':
+            if self.config.task.command != 'Alas':  # 如果任务不是特殊命令 "Alas"
                 release_resources(next_task=task.command)
 
+            # 检查任务的下一次运行时间是否已到
             if task.next_run > datetime.now():
                 logger.info(f'Wait until {task.next_run} for task `{task.command}`')
-                self.is_first_task = False
-                method = self.config.Optimization_WhenTaskQueueEmpty
-                if method == 'close_game':
-                    logger.info('Close game during wait')
-                    self.run('stop')
-                    release_resources()
-                    self.device.release_during_wait()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                    if task.command != 'Restart':
-                        self.config.task_call('Restart')
-                        del_cached_property(self, 'config')
-                        continue
-                elif method == 'goto_main':
-                    logger.info('Goto main page during wait')
-                    self.run('goto_main')
-                    release_resources()
-                    self.device.release_during_wait()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                elif method == 'stay_there':
-                    logger.info('Stay there during wait')
-                    release_resources()
-                    self.device.release_during_wait()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                else:
-                    logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
-                    release_resources()
-                    self.device.release_during_wait()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-            break
+                self.is_first_task = False  # 标记不是第一个任务
 
-        AzurLaneConfig.is_hoarding_task = False
-        return task.command
+                # 根据优化策略处理等待期间的行为
+                method = self.config.Optimization_WhenTaskQueueEmpty
+                if method == 'close_game':  # 策略：关闭游戏
+                    logger.info('Close game during wait')
+                    self.run('stop')  # 停止游戏
+                    release_resources()  # 释放资源
+                    self.device.release_during_wait()  # 设备在等待期间释放资源
+                    if not self.wait_until(task.next_run):  # 等待直到任务的下一次运行时间
+                        del_cached_property(self, 'config_src')  # 清除缓存的配置属性
+                        continue  # 继续下一次循环
+                    if task.command != 'Restart':  # 如果任务不是 "Restart"
+                        self.config.task_call('Restart')  # 调用重启任务
+                        del_cached_property(self, 'config_src')  # 清除缓存的配置属性
+                        continue  # 继续下一次循环
+
+                elif method == 'goto_main':  # 策略：返回主页面
+                    logger.info('Goto main page during wait')
+                    self.run('goto_main')  # 返回主页面
+                    release_resources()  # 释放资源
+                    self.device.release_during_wait()  # 设备在等待期间释放资源
+                    if not self.wait_until(task.next_run):  # 等待直到任务的下一次运行时间
+                        del_cached_property(self, 'config_src')  # 清除缓存的配置属性
+                        continue  # 继续下一次循环
+
+                elif method == 'stay_there':  # 策略：保持原地
+                    logger.info('Stay there during wait')
+                    release_resources()  # 释放资源
+                    self.device.release_during_wait()  # 设备在等待期间释放资源
+                    if not self.wait_until(task.next_run):  # 等待直到任务的下一次运行时间
+                        del_cached_property(self, 'config_src')  # 清除缓存的配置属性
+                        continue  # 继续下一次循环
+
+                else:  # 无效的优化策略
+                    logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
+                    release_resources()  # 释放资源
+                    self.device.release_during_wait()  # 设备在等待期间释放资源
+                    if not self.wait_until(task.next_run):  # 等待直到任务的下一次运行时间
+                        del_cached_property(self, 'config_src')  # 清除缓存的配置属性
+                        continue  # 继续下一次循环
+
+            break  # 如果任务的下一次运行时间已到，则退出循环
+
+        AzurLaneConfig.is_hoarding_task = False  # 标记任务队列不再堆积
+        return task.command  # 返回任务的命令名称
 
     def loop(self):
         logger.set_file_logger(self.config_name)
@@ -260,10 +274,10 @@ class AzurLaneAutoScript:
             self.checker.wait_until_available()
             if self.checker.is_recovered():
                 # There is an accidental bug hard to reproduce
-                # Sometimes, config won't be updated due to blocking
+                # Sometimes, config_src won't be updated due to blocking
                 # even though it has been changed
                 # So update it once recovered
-                del_cached_property(self, 'config')
+                del_cached_property(self, 'config_src')
                 logger.info('Server or network is recovered. Restart game client')
                 self.config.task_call('Restart')
             # Get task
@@ -275,7 +289,7 @@ class AzurLaneAutoScript:
             if self.is_first_task and task == 'Restart':
                 logger.info('Skip task `Restart` at scheduler start')
                 self.config.task_delay(server_update=True)
-                del_cached_property(self, 'config')
+                del_cached_property(self, 'config_src')
                 continue
 
             # Run
@@ -306,11 +320,11 @@ class AzurLaneAutoScript:
                 exit(1)
 
             if success:
-                del_cached_property(self, 'config')
+                del_cached_property(self, 'config_src')
                 continue
             else:
-                # self.config.task_delay(success=False)
-                del_cached_property(self, 'config')
+                # self.config_src.task_delay(success=False)
+                del_cached_property(self, 'config_src')
                 self.checker.check_now()
                 continue
 

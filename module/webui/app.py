@@ -40,9 +40,9 @@ from pywebio.session import (
 )
 
 import module.webui.lang as lang
-from module.config.config import AzurLaneConfig, Function
-from module.config.deep import deep_get, deep_iter, deep_set
-from module.config.utils import (
+from module.config_src.config import AzurLaneConfig, Function
+from module.config_src.deep import deep_get, deep_iter, deep_set
+from module.config_src.utils import (
     alas_instance,
     alas_template,
     dict_to_kv,
@@ -109,7 +109,7 @@ class AlasGUI(Frame):
         super().__init__()
         # modified keys, return values of pin_wait_change()
         self.modified_config_queue = queue.Queue()
-        # alas config name
+        # alas config_src name
         self.alas_name = ""
         self.alas_mod = "alas"
         self.alas_config = AzurLaneConfig("template")
@@ -322,7 +322,7 @@ class AlasGUI(Frame):
             # Display title
             output_kwargs["title"] = t(f"{group_name}.{arg_name}.name")
 
-            # Get value from config
+            # Get value from config_src
             value = deep_get(
                 config, [task, group_name, arg_name], output_kwargs["value"]
             )
@@ -515,7 +515,7 @@ class AlasGUI(Frame):
             pin_on_change(
                 name="_".join(path), onchange=partial(put_queue, ".".join(path))
             )
-        logger.info("Init config watcher done.")
+        logger.info("Init config_src watcher done.")
 
     def _alas_thread_update_config(self) -> None:
         modified = {}
@@ -588,7 +588,7 @@ class AlasGUI(Frame):
                     color="success",
                 )
                 logger.info(
-                    f"Save config {filepath_config(config_name)}, {dict_to_kv(modified)}"
+                    f"Save config_src {filepath_config(config_name)}, {dict_to_kv(modified)}"
                 )
                 config_updater.write_file(config_name, config)
         except Exception as e:
@@ -1236,10 +1236,10 @@ class AlasGUI(Frame):
         aside = get_localstorage("aside")
         self.show()
 
-        # init config watcher
+        # init config_src watcher
         self._init_alas_config_watcher()
 
-        # save config
+        # save config_src
         _thread_save_config = threading.Thread(target=self._alas_thread_update_config)
         register_thread(_thread_save_config)
         _thread_save_config.start()
@@ -1357,11 +1357,11 @@ def app():
         "--run",
         nargs="+",
         type=str,
-        help="Run alas by config names on startup",
+        help="Run alas by config_src names on startup",
     )
     args, _ = parser.parse_known_args()
 
-    # Apply config
+    # Apply config_src
     AlasGUI.set_theme(theme=State.deploy_config.Theme)
     lang.LANG = State.deploy_config.Language
     key = args.key or State.deploy_config.Password
@@ -1382,7 +1382,7 @@ def app():
     logger.attr("CDN", cdn)
 
     from deploy.Windows.atomic import atomic_failure_cleanup
-    atomic_failure_cleanup('./config')
+    atomic_failure_cleanup('./config_src')
 
     def index():
         if key is not None and not login(key):

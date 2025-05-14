@@ -11,7 +11,7 @@ import numpy as np
 from module.base.decorator import cached_property, del_cached_property, has_cached_property
 from module.base.timer import Timer
 from module.base.utils import ensure_time
-from module.config.deep import deep_get
+from module.config_src.deep import deep_get
 from module.device.env import IS_WINDOWS
 from module.device.method.minitouch import insert_swipe, random_rectangle_point
 from module.device.method.pool import JobTimeout, WORKER_POOL
@@ -523,16 +523,16 @@ class NemuIpc(Platform):
     @staticmethod
     def check_mumu_app_keep_alive_400(file):
         """
-        Check app_keep_alive from emulator config if version >= 4.0
+        Check app_keep_alive from emulator config_src if version >= 4.0
 
         Args:
-            file: E:/ProgramFiles/MuMuPlayer-12.0/vms/MuMuPlayer-12.0-1/config/customer_config.json
+            file: E:/ProgramFiles/MuMuPlayer-12.0/vms/MuMuPlayer-12.0-1/config_src/customer_config.json
 
         Returns:
             bool: If success to read file
         """
         # with E:\ProgramFiles\MuMuPlayer-12.0\shell\MuMuPlayer.exe
-        # config is E:\ProgramFiles\MuMuPlayer-12.0\vms\MuMuPlayer-12.0-1\config\customer_config.json
+        # config_src is E:\ProgramFiles\MuMuPlayer-12.0\vms\MuMuPlayer-12.0-1\config_src\customer_config.json
         try:
             with open(file, mode='r', encoding='utf-8') as f:
                 s = f.read()

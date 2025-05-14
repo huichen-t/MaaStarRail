@@ -2,8 +2,8 @@ import time
 from datetime import datetime
 from typing import Dict
 
-from module.config.deep import deep_iter
-from module.config.utils import DEFAULT_TIME, LANGUAGES, filepath_i18n, read_file
+from module.config_src.deep import deep_iter
+from module.config_src.utils import DEFAULT_TIME, LANGUAGES, filepath_i18n, read_file
 from module.webui.fake import list_mod
 from module.webui.setting import State
 

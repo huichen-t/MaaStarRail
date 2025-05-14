@@ -1,6 +1,27 @@
 import random
 
 
+def ensure_int(*args):
+    """
+    将所有元素转换为整数
+    保持嵌套对象的相同结构
+
+    Args:
+        *args: 要转换的参数
+
+    Returns:
+        list: 转换后的整数列表
+    """
+    def to_int(item):
+        try:
+            return int(item)
+        except TypeError:
+            result = [to_int(i) for i in item]
+            if len(result) == 1:
+                result = result[0]
+            return result
+
+    return to_int(args)
 
 def random_normal_distribution_int(a, b, n=3):
     """

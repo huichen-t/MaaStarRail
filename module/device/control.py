@@ -1,55 +1,112 @@
-from module.base.button import ClickButton
+"""
+游戏控制模块。
+提供多种控制方法，支持不同模拟器和设备的点击、滑动等操作。
+包括：
+- ADB控制
+- uiautomator2控制
+- minitouch控制
+- Hermit控制
+- MaaTouch控制
+- Nemu IPC控制
+- scrcpy控制
+"""
+import numpy as np
+
 from module.base.decorator import cached_property
 from module.base.timer import Timer
 from module.base.utils import *
-from module.device.method.hermit import Hermit
-from module.device.method.maatouch import MaaTouch
-from module.device.method.minitouch import Minitouch
-from module.device.method.nemu_ipc import NemuIpc
-from module.device.method.scrcpy import Scrcpy
+from module.base.utils.str_utils import point2str
+from module.device.controllers import (
+    UiautomatorController,
+    MinitouchController,
+    HermitController,
+    MaaTouchController,
+    NemuController,
+    ScrcpyController,
+    AdbController
+)
 from module.logger import logger
 
 
-class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
+class Control:
+    """
+    游戏控制类。
+    使用组合模式整合多种控制方法，提供统一的控制接口。
+    支持多种控制方式，自动选择最优方法。
+    """
+    def __init__(self, config):
+        """
+        初始化控制类。
+        
+        Args:
+            config: 配置对象
+        """
+        self.config = config
+        # 初始化各种控制方法
+        self.controllers = {
+            'uiautomator2': UiautomatorController(config),
+            'minitouch': MinitouchController(config),
+            'Hermit': HermitController(config),
+            'MaaTouch': MaaTouchController(config),
+            'nemu_ipc': NemuController(config),
+            'scrcpy': ScrcpyController(config),
+            'ADB': AdbController(config),
+        }
+        # 连接当前配置的控制方法
+        self._connect_current_controller()
+
+    def _connect_current_controller(self):
+        """
+        连接当前配置的控制方法。
+        """
+        method = self.config.Emulator_ControlMethod
+        controller = self.controllers.get(method)
+        if controller:
+            if not controller.connect():
+                logger.error(f'Failed to connect to {method} controller')
+                raise RequestHumanTakeover
+
     def handle_control_check(self, button):
+        """
+        控制检查处理函数。
+        将在Device类中被重写。
+        
+        Args:
+            button: 按钮对象
+        """
         # Will be overridden in Device
         pass
 
     @cached_property
     def click_methods(self):
+        """
+        获取所有可用的点击方法。
+        
+        Returns:
+            dict: 点击方法字典，键为方法名，值为对应的方法函数
+        """
         return {
-            'ADB': self.click_adb,
-            'uiautomator2': self.click_uiautomator2,
-            'minitouch': self.click_minitouch,
-            'Hermit': self.click_hermit,
-            'MaaTouch': self.click_maatouch,
-            'nemu_ipc': self.click_nemu_ipc,
+            'ADB': self.controllers['ADB'].click,
+            'uiautomator2': self.controllers['uiautomator2'].click,
+            'minitouch': self.controllers['minitouch'].click,
+            'Hermit': self.controllers['Hermit'].click,
+            'MaaTouch': self.controllers['MaaTouch'].click,
+            'nemu_ipc': self.controllers['nemu_ipc'].click,
         }
 
-    def click(self, button, control_check=True):
-        """Method to click a button.
-
-        Args:
-            button (button.Button): AzurLane Button instance.
-            control_check (bool):
-        """
-        if control_check:
-            self.handle_control_check(button)
-        x, y = random_rectangle_point(button.button)
-        x, y = ensure_int(x, y)
-        logger.info(
-            'Click %s @ %s' % (point2str(x, y), button)
-        )
-        method = self.click_methods.get(
-            self.config.Emulator_ControlMethod,
-            self.click_adb
-        )
-        method(x, y)
-
     def multi_click(self, button, n, interval=(0.1, 0.2)):
+        """
+        多次点击按钮。
+        
+        Args:
+            button: 要点击的按钮
+            n (int): 点击次数
+            interval (tuple): 点击间隔时间范围（秒）
+        """
         self.handle_control_check(button)
         click_timer = Timer(0.1)
         for _ in range(n):
+            # 计算剩余等待时间
             remain = ensure_time(interval) - click_timer.current()
             if remain > 0:
                 self.sleep(remain)
@@ -57,118 +114,84 @@ class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
 
             self.click(button, control_check=False)
 
-    def long_click(self, button, duration=(1, 1.2)):
-        """Method to long click a button.
-
-        Args:
-            button (button.Button): AzurLane Button instance.
-            duration(int, float, tuple):
-        """
-        self.handle_control_check(button)
-        x, y = random_rectangle_point(button.button)
-        x, y = ensure_int(x, y)
-        duration = ensure_time(duration)
-        logger.info(
-            'Click %s @ %s, %s' % (point2str(x, y), button, duration)
-        )
-        method = self.config.Emulator_ControlMethod
-        if method == 'minitouch':
-            self.long_click_minitouch(x, y, duration)
-        elif method == 'uiautomator2':
-            self.long_click_uiautomator2(x, y, duration)
-        elif method == 'scrcpy':
-            self.long_click_scrcpy(x, y, duration)
-        elif method == 'MaaTouch':
-            self.long_click_maatouch(x, y, duration)
-        elif method == 'nemu_ipc':
-            self.long_click_nemu_ipc(x, y, duration)
-        else:
-            self.swipe_adb((x, y), (x, y), duration)
-
     def swipe(self, p1, p2, duration=(0.1, 0.2), name='SWIPE', distance_check=True):
+        """
+        滑动操作。
+        
+        Args:
+            p1 (tuple): 起始点坐标
+            p2 (tuple): 结束点坐标
+            duration (tuple): 滑动持续时间范围（秒）
+            name (str): 操作名称
+            distance_check (bool): 是否检查滑动距离
+        """
         self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
         duration = ensure_time(duration)
         method = self.config.Emulator_ControlMethod
+        controller = self.controllers.get(method)
+        
+        # 根据不同控制方法记录日志
         if method == 'uiautomator2':
             logger.info('Swipe %s -> %s, %s' % (point2str(*p1), point2str(*p2), duration))
         elif method in ['minitouch', 'MaaTouch', 'scrcpy', 'nemu_ipc']:
             logger.info('Swipe %s -> %s' % (point2str(*p1), point2str(*p2)))
         else:
-            # ADB needs to be slow, or swipe doesn't work
+            # ADB需要较慢的速度，否则滑动可能无效
             duration *= 2.5
             logger.info('Swipe %s -> %s, %s' % (point2str(*p1), point2str(*p2), duration))
 
+        # 检查滑动距离
         if distance_check:
             if np.linalg.norm(np.subtract(p1, p2)) < 10:
-                # Should swipe a certain distance, otherwise AL will treat it as click.
-                # uiautomator2 should >= 6px, minitouch should >= 5px
+                # 滑动距离需要达到一定值，否则游戏会将其视为点击
+                # uiautomator2需要>=6像素，minitouch需要>=5像素
                 logger.info('Swipe distance < 10px, dropped')
                 return
 
-        if method == 'minitouch':
-            self.swipe_minitouch(p1, p2)
-        elif method == 'uiautomator2':
-            self.swipe_uiautomator2(p1, p2, duration=duration)
-        elif method == 'scrcpy':
-            self.swipe_scrcpy(p1, p2)
-        elif method == 'MaaTouch':
-            self.swipe_maatouch(p1, p2)
-        elif method == 'nemu_ipc':
-            self.swipe_nemu_ipc(p1, p2)
-        else:
-            self.swipe_adb(p1, p2, duration=duration)
-
-    def swipe_vector(self, vector, box=(123, 159, 1175, 628), random_range=(0, 0, 0, 0), padding=15,
-                     duration=(0.1, 0.2), whitelist_area=None, blacklist_area=None, name='SWIPE', distance_check=True):
-        """Method to swipe.
-
-        Args:
-            box (tuple): Swipe in box (upper_left_x, upper_left_y, bottom_right_x, bottom_right_y).
-            vector (tuple): (x, y).
-            random_range (tuple): (x_min, y_min, x_max, y_max).
-            padding (int):
-            duration (int, float, tuple):
-            whitelist_area: (list[tuple[int]]):
-                A list of area that safe to click. Swipe path will end there.
-            blacklist_area: (list[tuple[int]]):
-                If none of the whitelist_area satisfies current vector, blacklist_area will be used.
-                Delete random path that ends in any blacklist_area.
-            name (str): Swipe name
-            distance_check: (bool):
-        """
-        p1, p2 = random_rectangle_vector_opted(
-            vector,
-            box=box,
-            random_range=random_range,
-            padding=padding,
-            whitelist_area=whitelist_area,
-            blacklist_area=blacklist_area
-        )
-        self.swipe(p1, p2, duration=duration, name=name, distance_check=distance_check)
+        # 执行滑动操作
+        controller.swipe(p1[0], p1[1], p2[0], p2[1], duration=duration)
 
     def drag(self, p1, p2, segments=1, shake=(0, 15), point_random=(-10, -10, 10, 10), shake_random=(-5, -5, 5, 5),
              swipe_duration=0.25, shake_duration=0.1, name='DRAG'):
+        """
+        拖拽操作。
+        
+        Args:
+            p1 (tuple): 起始点坐标
+            p2 (tuple): 结束点坐标
+            segments (int): 分段数
+            shake (tuple): 抖动范围
+            point_random (tuple): 点随机范围
+            shake_random (tuple): 抖动随机范围
+            swipe_duration (float): 滑动持续时间
+            shake_duration (float): 抖动持续时间
+            name (str): 操作名称
+        """
         self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
         logger.info(
             'Drag %s -> %s' % (point2str(*p1), point2str(*p2))
         )
+        # 根据控制方法选择对应的拖拽实现
         method = self.config.Emulator_ControlMethod
-        if method == 'minitouch':
-            self.drag_minitouch(p1, p2, point_random=point_random)
+        controller = self.controllers.get(method)
+        
+        if method in ['minitouch', 'scrcpy', 'MaaTouch', 'nemu_ipc']:
+            controller.drag(p1[0], p1[1], p2[0], p2[1], duration=swipe_duration)
         elif method == 'uiautomator2':
-            self.drag_uiautomator2(
-                p1, p2, segments=segments, shake=shake, point_random=point_random, shake_random=shake_random,
-                swipe_duration=swipe_duration, shake_duration=shake_duration)
-        elif method == 'scrcpy':
-            self.drag_scrcpy(p1, p2, point_random=point_random)
-        elif method == 'MaaTouch':
-            self.drag_maatouch(p1, p2, point_random=point_random)
-        elif method == 'nemu_ipc':
-            self.drag_nemu_ipc(p1, p2, point_random=point_random)
+            controller.drag(p1[0], p1[1], p2[0], p2[1], duration=swipe_duration)
         else:
+            # 对于不支持拖拽的控制方法，回退到ADB滑动
             logger.warning(f'Control method {method} does not support drag well, '
                            f'falling back to ADB swipe may cause unexpected behaviour')
-            self.swipe_adb(p1, p2, duration=ensure_time(swipe_duration * 2))
-            self.click(ClickButton(area=area_offset(point_random, p2), name=name))
+            self.controllers['ADB'].swipe(p1[0], p1[1], p2[0], p2[1], duration=swipe_duration * 2)
+
+    def release(self):
+        """
+        释放资源。
+        释放所有控制方法的资源。
+        """
+        for controller in self.controllers.values():
+            controller.release()
+

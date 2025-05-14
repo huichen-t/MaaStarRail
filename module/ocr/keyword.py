@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import ClassVar
 
-import module.config.server as server
+import module.config_src.server as server
 from module.exception import ScriptError
 
 # ord('．') = 65294
