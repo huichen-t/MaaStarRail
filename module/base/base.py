@@ -8,10 +8,10 @@ from module.base.utils.image_utils import crop, color_similarity_2d, image_size,
 
 from module.base.timer import Timer
 from module.config_src.config import AzurLaneConfig
-from module.core.points import fit_points
+from module.base.points import fit_points
 from module.device.device import Device
 from module.device.method.utils import HierarchyButton
-from module.logger import logger
+from module.base.logger import logger
 from module.webui.setting import cached_class_property
 
 
@@ -530,7 +530,7 @@ class ModuleBase:
 
         def image_encode(im, ti):
             import io
-            from module.logger.sensitive_info import handle_sensitive_image
+            from module.base.logger.sensitive_info import handle_sensitive_image
 
             output = io.BytesIO()
             im = handle_sensitive_image(im)

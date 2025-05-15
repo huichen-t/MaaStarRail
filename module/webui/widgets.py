@@ -1,4 +1,3 @@
-import copy
 import json
 import random
 import string
@@ -10,7 +9,7 @@ from pywebio.output import *
 from pywebio.session import eval_js, local, run_js
 from rich.console import ConsoleRenderable
 
-from module.logger import WEB_THEME, Highlighter, HTMLConsole
+from module.base.logger import WEB_THEME, Highlighter, HTMLConsole
 from module.webui.lang import t
 from module.webui.pin import put_checkbox, put_input, put_select, put_textarea
 from module.webui.process_manager import ProcessManager

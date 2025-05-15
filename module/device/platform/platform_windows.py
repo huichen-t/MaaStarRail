@@ -10,7 +10,7 @@ from module.device.connection import AdbDeviceWithStatus
 from module.device.platform.platform_base import PlatformBase
 from module.device.platform.emulator_windows import Emulator, EmulatorInstance, EmulatorManager
 from module.device.platform.utils import iter_process
-from module.logger import logger
+from module.base.logger import logger
 
 
 class EmulatorUnknown(Exception):

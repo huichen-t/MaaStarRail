@@ -3,7 +3,7 @@ import re
 import sys
 
 from module.base.decorator import cached_property
-from module.logger import logger
+from module.base.logger import logger
 
 """
 Importing pkg_resources is so slow, like 0.4 ~ 1.0s, just google it you will find it indeed really slow.

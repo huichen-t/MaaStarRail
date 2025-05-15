@@ -10,7 +10,7 @@ from deploy.Windows.git import GitManager
 from deploy.Windows.pip import PipManager
 from deploy.Windows.utils import DEPLOY_CONFIG
 from module.base.retry import retry
-from module.logger import logger
+from module.base.logger import logger
 from module.webui.config import DeployConfig
 from module.webui.process_manager import ProcessManager
 from module.webui.setting import State

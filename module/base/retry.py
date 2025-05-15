@@ -3,7 +3,7 @@ import random
 import time
 from functools import partial
 
-from module.logger import logger as logging_logger
+from module.base.logger import logger as logging_logger
 
 """
 从 `retry` 模块复制并修改而来

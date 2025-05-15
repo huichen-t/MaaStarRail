@@ -8,7 +8,7 @@ from typing import Dict, List, Union
 import inflection
 from rich.console import Console, ConsoleRenderable
 
-from module.logger import logger, set_file_logger, set_func_logger
+from module.base.logger import logger, set_file_logger, set_func_logger
 from module.webui.fake import get_config_mod, mod_instance
 from module.webui.setting import State
 from module.webui.submodule.utils import get_available_func
@@ -138,7 +138,7 @@ class ProcessManager:
         if State.electron:
             # https://github.com/LmeSzinc/AzurLaneAutoScript/issues/2051
             logger.info("Electron detected, remove log output to stdout")
-            from module.logger.logger import console_hdlr
+            from module.base.logger import console_hdlr
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
 

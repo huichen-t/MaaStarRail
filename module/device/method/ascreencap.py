@@ -5,12 +5,11 @@ from functools import wraps
 import lz4.block
 from adbutils.errors import AdbError
 
-from module.base.utils import *
 from module.device.connection import Connection
 from module.device.method.utils import (ImageTruncated, RETRY_TRIES, handle_adb_error, handle_unknown_host_service,
                                         retry_sleep)
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 class AscreencapError(Exception):

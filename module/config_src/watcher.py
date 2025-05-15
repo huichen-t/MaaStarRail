@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 from module.config_src.utils import filepath_config, DEFAULT_TIME
-from module.logger import logger
+from module.base.logger import logger
 
 
 class ConfigWatcher:

@@ -10,7 +10,7 @@ from module.base.base import ModuleBase
 from module.base.button import Button, ButtonWrapper
 from module.base.timer import Timer
 from module.base.utils import color_similarity_2d, random_rectangle_point, rgb2gray
-from module.logger import logger
+from module.base.logger import logger
 
 
 class Scroll:

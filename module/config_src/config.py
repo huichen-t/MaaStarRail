@@ -21,7 +21,7 @@ from module.config_src.stored.stored_generated import StoredGenerated
 from module.config_src.utils import DEFAULT_TIME, dict_to_kv, filepath_config, path_to_arg
 from module.config_src.watcher import ConfigWatcher
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 class TaskEnd(Exception):

@@ -49,7 +49,7 @@ class StoredBase:
     @functools_cached_property
     def _stored(self):
         assert self._config is not None, 'StoredBase._bind() must be called before getting stored data'
-        from module.logger import logger
+        from module.base.logger import logger
 
         out = {}
         stored = deep_get(self._config.data, keys=self._key, default={})
@@ -108,13 +108,13 @@ class StoredBase:
         """
         Log self
         """
-        from module.logger import logger
+        from module.base.logger import logger
         logger.attr(self._name, self._stored)
 
 
 class StoredExpiredAt0400(StoredBase):
     def is_expired(self):
-        from module.logger import logger
+        from module.base.logger import logger
         self.show()
         expired = self.time < get_server_last_update('04:00')
         logger.attr(f'{self._name} expired', expired)
@@ -123,7 +123,7 @@ class StoredExpiredAt0400(StoredBase):
 
 class StoredExpiredAtMonday0400(StoredBase):
     def is_expired(self):
-        from module.logger import logger
+        from module.base.logger import logger
         self.show()
         expired = self.time < get_server_last_monday_update('04:00')
         logger.attr(f'{self._name} expired', expired)

@@ -1,7 +1,6 @@
 import module.config_src.server as server
 from module.base.decorator import cached_property, del_cached_property
 from module.base.resource import Resource
-from module.base.utils import *
 from module.exception import ScriptError
 
 
@@ -309,7 +308,7 @@ class ButtonWrapper(Resource):
         if not ps:
             return []
 
-        from module.core.points import Points
+        from module.base.points import Points
         ps = Points(ps).group(threshold=threshold)
         area_list = [area_offset(self.area, p - self.area[:2]) for p in ps]
         button_list = [area_offset(self.button, p - self.area[:2]) for p in ps]

@@ -12,11 +12,10 @@ from uiautomator2 import _Service
 
 from module.base.decorator import Config, cached_property, del_cached_property, has_cached_property
 from module.base.timer import Timer
-from module.base.utils import *
 from module.device.connection import Connection
 from module.device.method.utils import RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 def random_normal_distribution(a, b, n=5):

@@ -16,7 +16,7 @@ import time
 from subprocess import PIPE, Popen
 from typing import TYPE_CHECKING
 
-from module.logger import logger
+from module.base.logger import logger
 from module.config_src.utils import random_id
 from module.webui.setting import State
 

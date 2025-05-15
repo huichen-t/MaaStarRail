@@ -48,7 +48,7 @@ except ImportError:
     adbutils._device.BaseDevice.shell = shell
 
 from module.base.decorator import cached_property
-from module.logger import logger
+from module.base.logger import logger
 
 RETRY_TRIES = 5
 RETRY_DELAY = 3

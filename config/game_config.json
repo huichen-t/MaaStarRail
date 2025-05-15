@@ -1,0 +1,56 @@
+{
+    "game": {
+        "params": {
+            "wait_timeout": 10,
+            "click_interval": 0.5,
+            "swipe_duration": 0.5,
+            "drag_duration": 0.5
+        },
+        "ui": {
+            "main_menu": {
+                "name": "主菜单",
+                "template": "main_menu.png",
+                "position": [
+                    100,
+                    100
+                ],
+                "click_offset": [
+                    10,
+                    10
+                ]
+            },
+            "battle": {
+                "name": "战斗界面",
+                "template": "battle.png",
+                "position": [
+                    200,
+                    200
+                ],
+                "click_offset": [
+                    10,
+                    10
+                ]
+            }
+        },
+        "tasks": {
+            "daily": {
+                "name": "日常任务",
+                "enabled": false,
+                "priority": 3,
+                "subtasks": [
+                    "login",
+                    "claim_rewards"
+                ]
+            },
+            "weekly": {
+                "name": "周常任务",
+                "enabled": true,
+                "priority": 2,
+                "subtasks": [
+                    "complete_weekly",
+                    "claim_weekly_rewards"
+                ]
+            }
+        }
+    }
+}

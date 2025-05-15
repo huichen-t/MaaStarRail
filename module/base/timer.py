@@ -198,7 +198,7 @@ class Timer:
         """
         打印计时器信息
         """
-        from module.logger import logger
+        from module.base.logger import logger
         logger.info(str(self))
 
     def __str__(self):

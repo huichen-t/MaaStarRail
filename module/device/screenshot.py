@@ -31,7 +31,7 @@ from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
 from module.device.method.wsa import WSA
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):

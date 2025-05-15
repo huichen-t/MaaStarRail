@@ -17,6 +17,7 @@ from lxml import etree
 from module.device.env import IS_WINDOWS
 # 在导入adbutils和uiautomator2之前修补pkg_resources
 from module.device.pkg_resources import get_distribution
+from module.test.benchmark import Benchmark
 
 # 避免被导入优化移除
 _ = get_distribution
@@ -32,50 +33,9 @@ from module.exception import (
     GameTooManyClickError,
     RequestHumanTakeover
 )
-from module.logger import logger
+from module.base.logger import logger
 
 
-def show_function_call():
-    """
-    显示函数调用栈。
-    用于调试时显示当前执行路径。
-    输出格式示例：
-    INFO     21:07:31.554 │ Function calls:
-                       <string>   L1 <module>
-                   spawn.py L116 spawn_main()
-                   spawn.py L129 _main()
-                 process.py L314 _bootstrap()
-                 process.py L108 run()
-         process_manager.py L149 run_process()
-                    alas.py L285 loop()
-                    alas.py  L69 run()
-                     src.py  L55 rogue()
-                   rogue.py  L36 run()
-                   rogue.py  L18 rogue_once()
-                   entry.py L335 rogue_world_enter()
-                    path.py L193 rogue_path_select()
-    """
-    import os
-    import traceback
-    stack = traceback.extract_stack()
-    func_list = []
-    for row in stack:
-        filename, line_number, function_name, _ = row
-        filename = os.path.basename(filename)
-        # /tasks/character/switch.py:64 character_update()
-        func_list.append([filename, str(line_number), function_name])
-    max_filename = max([len(row[0]) for row in func_list])
-    max_linenum = max([len(row[1]) for row in func_list]) + 1
-
-    def format_(file, line, func):
-        file = file.rjust(max_filename, " ")
-        line = f'L{line}'.rjust(max_linenum, " ")
-        if not func.startswith('<'):
-            func = f'{func}()'
-        return f'{file} {line} {func}'
-
-    func_list = [f'\n{format_(*row)}' for row in func_list]
-    logger.info('Function calls:' + ''.join(func_list))
 
 
 class Device(Screenshot, Control, AppControl):
@@ -146,7 +106,7 @@ class Device(Screenshot, Control, AppControl):
         # 首先检查分辨率
         self.resolution_check_uiautomator2()
         # 执行基准测试
-        from module.daemon.benchmark import Benchmark
+
         bench = Benchmark(config=self.config, device=self)
         method = bench.run_simple_screenshot_benchmark()
         # 设置

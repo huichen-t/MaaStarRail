@@ -1,6 +1,6 @@
 import re
 
-from module.logger import logger
+from module.base.logger import logger
 
 
 class Filter:

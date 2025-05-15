@@ -15,12 +15,11 @@ from adbutils.errors import AdbError
 
 from module.base.decorator import cached_property, del_cached_property, has_cached_property
 from module.base.timer import Timer
-from module.base.utils import *
 from module.device.connection import Connection
 from module.device.method.minitouch import CommandBuilder, insert_swipe
 from module.device.method.utils import RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 def retry(func):

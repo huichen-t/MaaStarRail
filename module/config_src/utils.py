@@ -424,7 +424,7 @@ def get_os_reset_remain():
     Returns:
         int: 距离下次重置的天数
     """
-    from module.logger import logger
+    from module.base.logger import logger
 
     next_reset = get_os_next_reset()
     now = datetime.now()

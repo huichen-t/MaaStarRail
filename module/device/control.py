@@ -25,7 +25,7 @@ from module.device.controllers import (
     ScrcpyController,
     AdbController
 )
-from module.logger import logger
+from module.base.logger import logger
 
 
 class Control:

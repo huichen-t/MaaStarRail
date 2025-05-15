@@ -55,7 +55,7 @@ class Resource:
 
     @classmethod
     def resource_show(cls):
-        from module.logger import logger
+        from module.base.logger import logger
         logger.hr('Show resource')
         for key, obj in cls.instances.items():
             if cls.is_loaded(obj):

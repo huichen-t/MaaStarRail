@@ -18,7 +18,7 @@ from module.device.method.pool import JobTimeout, WORKER_POOL
 from module.device.method.utils import RETRY_TRIES, retry_sleep
 from module.device.platform.plat import Platform
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 class NemuIpcIncompatible(Exception):

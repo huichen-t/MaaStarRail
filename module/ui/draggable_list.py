@@ -17,7 +17,7 @@ from module.base.button import ButtonWrapper
 from module.base.decorator import cached_property
 from module.base.timer import Timer
 from module.base.utils import area_size, random_rectangle_vector_opted
-from module.logger import logger
+from module.base.logger import logger
 from module.ocr.keyword import Keyword
 from module.ocr.ocr import OcrResultButton
 

@@ -42,7 +42,7 @@ class Config:
             def retire_ships(self, amount=None, rarity=None):
                 pass
         """
-        from module.logger import logger
+        from module.base.logger import logger
         options = kwargs
 
         def decorate(func):
@@ -161,7 +161,7 @@ def function_drop(rate=0.5, default=None):
         70%的可能性:
         INFO | Click (1091,  628) @ REWARD_GOTO_MAIN
     """
-    from module.logger import logger
+    from module.base.logger import logger
 
     def decorate(func):
         @wraps(func)

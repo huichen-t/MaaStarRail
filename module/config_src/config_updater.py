@@ -283,86 +283,138 @@ class ConfigGenerator:
 
     @cached_property
     @timer
-    def args(self):
+    def args(self) -> dict:
         """
         合并各类配置定义，生成标准化的 args.json。
         
         合并流程：
-            task.yaml ---+
-        argument.yaml ---+-----> args.json
-        override.yaml ---+
-         default.yaml ---+
+            task.yaml ---+      # 任务定义文件，包含任务分组和任务列表
+        argument.yaml ---+-----> args.json  # 参数定义文件，包含参数类型和默认值
+        override.yaml ---+      # 参数覆盖文件，用于强制设置某些参数
+        default.yaml ---+      # 默认值文件，设置参数的默认值
         
         Returns:
             dict: 标准化后的参数配置，包含所有任务、分组、参数的详细定义
+            
+        Raises:
+            ValueError: 当配置合并过程中出现错误时抛出
         """
-        # Construct args
-        data = {}
+        # 初始化空字典存储最终配置
+        data: dict = {}
+        
+        # 遍历任务配置，深度为3（task_group -> task -> group）
         for path, groups in deep_iter(self.task, depth=3):
+            # 只处理tasks下的配置
             if 'tasks' not in path:
                 continue
-            task = path[2]
-            # Add storage to all task
-            # groups.append('Storage')
+            task = path[2]  # 获取任务名称
+            
+            # 遍历任务下的所有分组
             for group in groups:
+                # 检查分组是否在参数定义中存在
                 if group not in self.argument:
-                    print(f'`{task}.{group}` is not related to any argument group')
+                    print(f'警告: `{task}.{group}` 未关联到任何参数组')
                     continue
-                deep_set(data, keys=[task, group], value=deepcopy(self.argument[group]))
+                try:
+                    # 将参数定义复制到对应任务和分组下
+                    deep_set(data, keys=[task, group], value=deepcopy(self.argument[group]))
+                except Exception as e:
+                    print(f'错误: 设置参数 `{task}.{group}` 时出错: {str(e)}')
+                    continue
 
-        def check_override(path, value):
-            # Check existence
-            old = deep_get(data, keys=path, default=None)
-            if old is None:
-                print(f'`{".".join(path)}` is not a existing argument')
-                return False
-            # Check type
-            # But allow `Interval` to be different
-            old_value = old.get('value', None) if isinstance(old, dict) else old
-            value = old.get('value', None) if isinstance(value, dict) else value
-            if type(value) != type(old_value) \
-                    and old_value is not None \
-                    and path[2] not in ['SuccessInterval', 'FailureInterval']:
-                print(
-                    f'`{value}` ({type(value)}) and `{".".join(path)}` ({type(old_value)}) are in different types')
-                return False
-            # Check option
-            if isinstance(old, dict) and 'option' in old:
-                if value not in old['option']:
-                    print(f'`{value}` is not an option of argument `{".".join(path)}`')
+        def check_override(path: list, value: any) -> bool:
+            """
+            检查参数覆盖是否有效
+            
+            Args:
+                path: 参数路径
+                value: 要覆盖的值
+                
+            Returns:
+                bool: 是否可以覆盖
+                
+            Raises:
+                ValueError: 当参数验证失败时抛出
+            """
+            try:
+                # 检查参数是否存在
+                old = deep_get(data, keys=path, default=None)
+                if old is None:
+                    print(f'警告: `{".".join(path)}` 不是有效的参数')
                     return False
-            return True
+                    
+                # 获取旧值和新值
+                old_value = old.get('value', None) if isinstance(old, dict) else old
+                value = old.get('value', None) if isinstance(value, dict) else value
+                
+                # 检查类型是否匹配
+                # 允许Interval类型不同
+                if type(value) != type(old_value) \
+                        and old_value is not None \
+                        and path[2] not in ['SuccessInterval', 'FailureInterval']:
+                    print(
+                        f'警告: `{value}` ({type(value)}) 和 `{".".join(path)}` ({type(old_value)}) 类型不匹配')
+                    return False
+                    
+                # 检查值是否在选项列表中
+                if isinstance(old, dict) and 'option' in old:
+                    if value not in old['option']:
+                        print(f'警告: `{value}` 不是参数 `{".".join(path)}` 的有效选项')
+                        return False
+                return True
+            except Exception as e:
+                print(f'错误: 验证参数 `{".".join(path)}` 时出错: {str(e)}')
+                return False
 
-        # Set defaults
+        # 设置默认值
         for p, v in deep_iter(self.default, depth=3):
             if not check_override(p, v):
                 continue
-            deep_set(data, keys=p + ['value'], value=v)
-        # Override non-modifiable arguments
+            try:
+                deep_set(data, keys=p + ['value'], value=v)
+            except Exception as e:
+                print(f'错误: 设置默认值 `{".".join(p)}` 时出错: {str(e)}')
+                continue
+            
+        # 覆盖不可修改的参数
         for p, v in deep_iter(self.override, depth=3):
             if not check_override(p, v):
                 continue
-            if isinstance(v, dict):
-                typ = v.get('type')
-                if typ == 'state':
-                    pass
-                elif typ == 'lock':
-                    deep_default(v, keys='display', value="disabled")
-                elif deep_get(v, keys='value') is not None:
-                    deep_default(v, keys='display', value='hide')
-                for arg_k, arg_v in v.items():
-                    deep_set(data, keys=p + [arg_k], value=arg_v)
-            else:
-                deep_set(data, keys=p + ['value'], value=v)
-                deep_set(data, keys=p + ['display'], value='hide')
-        # Set command
+            try:
+                if isinstance(v, dict):
+                    typ = v.get('type')
+                    if typ == 'state':
+                        pass  # 状态类型参数保持原样
+                    elif typ == 'lock':
+                        # 锁定类型参数设置为禁用显示
+                        deep_default(v, keys='display', value="disabled")
+                    elif deep_get(v, keys='value') is not None:
+                        # 有值的参数隐藏显示
+                        deep_default(v, keys='display', value='hide')
+                    # 更新参数的所有属性
+                    for arg_k, arg_v in v.items():
+                        deep_set(data, keys=p + [arg_k], value=arg_v)
+                else:
+                    # 非字典类型的值直接设置
+                    deep_set(data, keys=p + ['value'], value=v)
+                    deep_set(data, keys=p + ['display'], value='hide')
+            except Exception as e:
+                print(f'错误: 覆盖参数 `{".".join(p)}` 时出错: {str(e)}')
+                continue
+            
+        # 设置命令
         for path, groups in deep_iter(self.task, depth=3):
             if 'tasks' not in path:
                 continue
             task = path[2]
-            if deep_get(data, keys=f'{task}.Scheduler.Command'):
-                deep_set(data, keys=f'{task}.Scheduler.Command.value', value=task)
-                deep_set(data, keys=f'{task}.Scheduler.Command.display', value='hide')
+            try:
+                # 如果存在调度器命令，设置为任务名称并隐藏
+                if deep_get(data, keys=f'{task}.Scheduler.Command'):
+                    deep_set(data, keys=f'{task}.Scheduler.Command.value', value=task)
+                    deep_set(data, keys=f'{task}.Scheduler.Command.display', value='hide')
+            except Exception as e:
+                print(f'错误: 设置命令 `{task}` 时出错: {str(e)}')
+                continue
 
         return data
 

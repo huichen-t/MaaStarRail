@@ -50,7 +50,7 @@ from module.config_src.utils import (
     filepath_config,
     read_file,
 )
-from module.logger import logger
+from module.base.logger import logger
 from module.webui.base import Frame
 from module.webui.fake import (
     get_config_mod,

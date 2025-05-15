@@ -7,9 +7,8 @@ from pponnxcr.predict_system import BoxedResult
 import module.config_src.server as server
 from module.base.button import ButtonWrapper
 from module.base.decorator import cached_property
-from module.base.utils import *
 from module.exception import ScriptError
-from module.logger import logger
+from module.base.logger import logger
 from module.ocr.keyword import Keyword
 from module.ocr.models import OCR_MODEL, TextSystem
 from module.ocr.utils import merge_buttons

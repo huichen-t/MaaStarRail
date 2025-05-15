@@ -16,7 +16,7 @@ from onepush.exceptions import OnePushException
 from onepush.providers.custom import Custom
 from requests import Response
 
-from module.logger import logger
+from module.base.logger import logger
 
 # 使用项目的logger替换onepush的logger
 onepush.core.log = logger

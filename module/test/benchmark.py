@@ -11,9 +11,9 @@ from rich.text import Text
 
 from module.base.utils import float2str as float2str_
 from module.base.utils import random_rectangle_point
-from module.core.daemon_base import DaemonBase
+from module.base.daemon_base import DaemonBase
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 def float2str(n, decimal=3):

@@ -31,7 +31,7 @@ from module.device.method.utils import (PackageNotInstalled, RETRY_TRIES, get_se
                                         handle_unknown_host_service, possible_reasons, random_port, recv_all,
                                         remove_shell_warning, retry_sleep)
 from module.exception import EmulatorNotRunningError, RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 def retry(func):

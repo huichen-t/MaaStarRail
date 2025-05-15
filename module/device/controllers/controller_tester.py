@@ -4,12 +4,11 @@
 """
 import time
 import argparse
-from typing import Dict, List, Type
+from typing import Dict
 import numpy as np
 from module.config import Config
-from module.device.controllers.base import DeviceController
 from module.device.controllers import *
-from module.logger import logger
+from module.base.logger import logger
 
 
 class ControllerTester:

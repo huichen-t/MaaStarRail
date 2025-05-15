@@ -24,7 +24,7 @@ from module.device.connection import Connection
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, remove_prefix, retry_sleep)
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 def retry(func):

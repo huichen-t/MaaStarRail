@@ -6,7 +6,7 @@ from module.device.method.uiautomator_2 import Uiautomator2
 from module.device.method.utils import HierarchyButton
 from module.device.method.wsa import WSA
 from module.exception import ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 class AppControl(Adb, WSA, Uiautomator2):

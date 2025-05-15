@@ -10,16 +10,12 @@
 
 import os
 import time
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 import numpy as np
 from PIL import Image
-import cv2
 
 from module.device.device import Device
-from module.device.connection import Connection
-from module.device.screenshot import Screenshot
-from module.device.control import Control
-from module.logger import logger
+from module.base.logger import logger
 
 
 class Controller:

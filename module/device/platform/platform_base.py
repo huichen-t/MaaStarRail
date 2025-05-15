@@ -8,7 +8,7 @@ from module.base.utils import SelectedGrids
 from module.device.connection import Connection
 from module.device.method.utils import get_serial_pair
 from module.device.platform.emulator_base import EmulatorInstanceBase, EmulatorManagerBase, remove_duplicated_path
-from module.logger import logger
+from module.base.logger import logger
 
 
 class EmulatorInfo(BaseModel):

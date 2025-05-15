@@ -4,17 +4,16 @@ Scrcpy控制器模块。
 Scrcpy是一个强大的Android设备显示和控制工具，通过ADB提供设备控制功能。
 """
 import time
-from typing import Tuple, Optional
+from typing import Tuple
 import numpy as np
 from adbutils.errors import AdbError
 
-from module.base.utils import *
 from module.device.controllers.base import DeviceController
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES,
                                       handle_adb_error, handle_unknown_host_service,
                                       possible_reasons, retry_sleep)
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 def retry(func):

@@ -1,0 +1,24 @@
+{
+    "device": {
+        "over_http": true,
+        "forward_port_range": [
+            30000,
+            31000
+        ]
+    },
+    "app": {
+        "assets": {
+            "folder": "./assets",
+            "module": "./tasks"
+        },
+        "params": {
+            "color_similar_threshold": 10,
+            "button_offset": [
+                20,
+                20
+            ],
+            "button_match_similarity": 0.85,
+            "wait_before_saving_screen_shot": 1
+        }
+    }
+}

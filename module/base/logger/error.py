@@ -3,7 +3,7 @@ import re
 import time
 from datetime import datetime
 
-from module.logger.logger import logger
+from module.base.logger import logger
 
 
 def save_error_log(config, device):
