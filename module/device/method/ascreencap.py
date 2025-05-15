@@ -1,210 +1,77 @@
+"""
+aScreenCap截图模块。
+提供高效的屏幕截图功能，使用aScreenCap工具进行截图。
+相比ADB screencap命令，aScreenCap具有以下优势：
+1. 更快的截图速度
+2. 更低的CPU占用
+3. 更小的内存占用
+4. 支持压缩传输
+
+与adb.py的关系：
+- adb.py提供基础的ADB操作接口
+- ascreencap.py在adb.py的基础上封装了专门的截图功能
+- 两者都继承自Connection类，共享基础的设备连接功能
+- 当adb.py的screencap命令无法满足需求时，可以使用ascreencap.py作为替代方案
+"""
+
 import os
-import time
-from functools import wraps
+from typing import Optional, Dict, Any
 
-import lz4.block
-from adbutils.errors import AdbError
+import numpy as np
 
-from module.device.connection import Connection
-from module.device.method.utils import (ImageTruncated, RETRY_TRIES, handle_adb_error, handle_unknown_host_service,
-                                        retry_sleep)
-from module.exception import RequestHumanTakeover, ScriptError
+from module.device.components.device_connection import DeviceConnection
+from module.device.components.command_executor import CommandExecutor
+from module.device.components.screenshot import ScreenshotComponent
+from module.device.method.utils import ImageTruncated
+from module.exception import RequestHumanTakeover
 from module.base.logger import logger
 
 
-class AscreencapError(Exception):
-    pass
+class AScreenCap:
+    """
+    aScreenCap截图类。
+    提供高效的屏幕截图功能。
+    """
+    def __init__(self, connection: DeviceConnection, executor: CommandExecutor, config: Dict[str, Any]):
+        self.connection = connection
+        self.executor = executor
+        self.config = config
+        self.screenshot = ScreenshotComponent(connection, executor, config)
 
-
-def retry(func):
-    @wraps(func)
-    def retry_wrapper(self, *args, **kwargs):
+    def init_screenshot_tool(self):
         """
-        Args:
-            self (AScreenCap):
+        初始化截图工具。
+        根据设备架构和Android版本选择合适的截图工具。
+        
+        Raises:
+            RequestHumanTakeover: 当没有合适的截图工具版本时抛出
         """
-        init = None
-        for _ in range(RETRY_TRIES):
-            try:
-                if callable(init):
-                    time.sleep(retry_sleep(_))
-                    init()
-                return func(self, *args, **kwargs)
-            # Can't handle
-            except RequestHumanTakeover:
-                break
-            # When adb server was killed
-            except ConnectionResetError as e:
-                logger.error(e)
+        self.screenshot.init_screenshot_tool()
 
-                def init():
-                    self.adb_reconnect()
-            # When ascreencap is not installed
-            except AscreencapError as e:
-                logger.error(e)
+    def uninstall_screenshot_tool(self):
+        """卸载截图工具"""
+        self.screenshot.uninstall_screenshot_tool()
 
-                def init():
-                    self.ascreencap_init()
-            # AdbError
-            except AdbError as e:
-                if handle_adb_error(e):
-                    def init():
-                        self.adb_reconnect()
-                elif handle_unknown_host_service(e):
-                    def init():
-                        self.adb_start_server()
-                        self.adb_reconnect()
-                else:
-                    break
-            # ImageTruncated
-            except ImageTruncated as e:
-                logger.error(e)
-
-                def init():
-                    pass
-            # Unknown
-            except Exception as e:
-                logger.exception(e)
-
-                def init():
-                    pass
-
-        logger.critical(f'Retry {func.__name__}() failed')
-        raise RequestHumanTakeover
-
-    return retry_wrapper
-
-
-class AScreenCap(Connection):
-    __screenshot_method = [0, 1, 2]
-    __screenshot_method_fixed = [0, 1, 2]
-    __bytepointer = 0
-    ascreencap_available = True
-
-    def ascreencap_init(self):
-        logger.hr('aScreenCap init')
-        self.__bytepointer = 0
-        self.ascreencap_available = True
-
-        arc = self.cpu_abi
-        sdk = self.sdk_ver
-        logger.info(f'cpu_arc: {arc}, sdk_ver: {sdk}')
-
-        if sdk in range(21, 26):
-            ver = "Android_5.x-7.x"
-        elif sdk in range(26, 28):
-            ver = "Android_8.x"
-        elif sdk == 28:
-            ver = "Android_9.x"
-        else:
-            ver = "0"
-        filepath = os.path.join(self.config.ASCREENCAP_FILEPATH_LOCAL, ver, arc, 'ascreencap')
-        if not os.path.exists(filepath):
-            self.ascreencap_available = False
-            logger.error('No suitable version of aScreenCap lib available for this device, '
-                         'please use other screenshot methods instead')
-            raise RequestHumanTakeover
-
-        logger.info(f'pushing {filepath}')
-        self.adb_push(filepath, self.config.ASCREENCAP_FILEPATH_REMOTE)
-
-        logger.info(f'chmod 0777 {self.config.ASCREENCAP_FILEPATH_REMOTE}')
-        self.adb_shell(['chmod', '0777', self.config.ASCREENCAP_FILEPATH_REMOTE])
-
-    def uninstall_ascreencap(self):
-        logger.info('Removing ascreencap')
-        self.adb_shell(['rm', self.config.ASCREENCAP_FILEPATH_REMOTE])
-
-    def _ascreencap_reposition_byte_pointer(self, byte_array):
-        """Method to return the sanitized version of ascreencap stdout for devices
-            that suffers from linker warnings. The correct pointer location will be saved
-            for subsequent screen refreshes
+    def screenshot(self) -> np.ndarray:
         """
-        while byte_array[self.__bytepointer:self.__bytepointer + 4] != b'BMZ1':
-            self.__bytepointer += 1
-            if self.__bytepointer >= len(byte_array):
-                text = 'Repositioning byte pointer failed, corrupted aScreenCap data received'
-                logger.warning(text)
-                if len(byte_array) < 500:
-                    logger.warning(f'Unexpected screenshot: {byte_array}')
-                raise AscreencapError(text)
-        return byte_array[self.__bytepointer:]
+        获取屏幕截图。
+        
+        Returns:
+            np.ndarray: 截图数据
+            
+        Raises:
+            RequestHumanTakeover: 当截图失败时抛出
+        """
+        return self.screenshot.screenshot()
 
-    def __load_screenshot(self, screenshot, method):
-        if method == 0:
-            return screenshot
-        elif method == 1:
-            return screenshot.replace(b'\r\n', b'\n')
-        elif method == 2:
-            return screenshot.replace(b'\r\r\n', b'\n')
-        else:
-            raise ScriptError(f'Unknown method to load screenshots: {method}')
-
-    def __uncompress(self, screenshot):
-        raw_compressed_data = self._ascreencap_reposition_byte_pointer(screenshot)
-
-        # See headers in:
-        # https://github.com/ClnViewer/Android-fast-screen-capture#streamimage-compressed---header-format-using
-        compressed_data_header = np.frombuffer(raw_compressed_data[0:20], dtype=np.uint32)
-        if compressed_data_header[0] != 828001602:
-            compressed_data_header = compressed_data_header.byteswap()
-            if compressed_data_header[0] != 828001602:
-                text = f'aScreenCap header verification failure, corrupted image received. ' \
-                    f'HEADER IN HEX = {compressed_data_header.tobytes().hex()}'
-                logger.warning(text)
-                raise AscreencapError(text)
-
-        _, uncompressed_size, _, width, height = compressed_data_header
-        channel = 3
-        data = lz4.block.decompress(raw_compressed_data[20:], uncompressed_size=uncompressed_size)
-
-        image = np.frombuffer(data, dtype=np.uint8)
-        if image is None:
-            raise ImageTruncated('Empty image after reading from buffer')
-
-        # Equivalent to cv2.imdecode()
-        try:
-            image = image[-int(width * height * channel):].reshape(height, width, channel)
-        except ValueError as e:
-            # ValueError: cannot reshape array of size 0 into shape (720,1280,4)
-            raise ImageTruncated(str(e))
-
-        cv2.flip(image, 0, dst=image)
-        if image is None:
-            raise ImageTruncated('Empty image after cv2.flip')
-
-        cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
-        if image is None:
-            raise ImageTruncated('Empty image after cv2.cvtColor')
-
-        return image
-
-    def __process_screenshot(self, screenshot):
-        for method in self.__screenshot_method_fixed:
-            try:
-                result = self.__load_screenshot(screenshot, method=method)
-                result = self.__uncompress(result)
-                self.__screenshot_method_fixed = [method] + self.__screenshot_method
-                return result
-            except lz4.block.LZ4BlockError:
-                self.__bytepointer = 0
-                continue
-
-        self.__screenshot_method_fixed = self.__screenshot_method
-        if len(screenshot) < 500:
-            logger.warning(f'Unexpected screenshot: {screenshot}')
-        raise OSError(f'cannot load screenshot')
-
-    @retry
-    def screenshot_ascreencap(self):
-        content = self.adb_shell([self.config.ASCREENCAP_FILEPATH_REMOTE, '--pack', '2', '--stdout'], stream=True)
-
-        return self.__process_screenshot(content)
-
-    @retry
-    def screenshot_ascreencap_nc(self):
-        data = self.adb_shell_nc([self.config.ASCREENCAP_FILEPATH_REMOTE, '--pack', '2', '--stdout'])
-        if len(data) < 500:
-            logger.warning(f'Unexpected screenshot: {data}')
-
-        return self.__uncompress(data)
+    def screenshot_nc(self) -> np.ndarray:
+        """
+        使用netcat获取屏幕截图。
+        
+        Returns:
+            np.ndarray: 截图数据
+            
+        Raises:
+            RequestHumanTakeover: 当截图失败时抛出
+        """
+        return self.screenshot.screenshot_nc()
