@@ -23,6 +23,7 @@ from module.base.timer import Timer
 from module.device.device_utils import DeviceUtils
 from module.device.method.utils import HierarchyButton, random_port
 from module.exception import RequestHumanTakeover, ScriptError
+from module.device.utils.image_utils import ImageUtils
 
 
 class PackageNotInstalled(Exception):
@@ -842,53 +843,65 @@ class DeviceManager:
     
     def app_start(self) -> None:
         """
-        启动目标应用。
-        根据不同的控制方法选择相应的启动实现。
+        启动目标应用程序。
+        
+        功能说明：
+        - 根据设备类型选择合适的启动方法
+        - 支持WSA、uiautomator2和原生ADB三种启动方式
+        - 使用不同的启动命令确保应用正确启动
+        
+        启动方式：
+        1. WSA方式：使用am start命令启动MainActivity
+        2. uiautomator2方式：使用u2.app_start方法启动
+        3. ADB方式：使用monkey命令启动应用
+        
+        异常说明：
+        - 当未设置目标应用包名时抛出异常
+        - 当设备未连接时可能抛出异常
+        - 当应用未安装时可能抛出异常
+        
+        使用示例：
+            device_manager.package = "com.example.app"
+            device_manager.app_start()
         """
-        if self._package is None:
+        if not self._package:
             raise Exception("未设置目标应用包名")
             
         logger.info(f'App start: {self._package}')
+        
+        # 根据设备类型选择启动方式
         if DeviceUtils.is_wsa(self._serial):
-            self._app_start_wsa()
+            self.adb.shell(['am', 'start', '-n', f'{self._package}/.MainActivity'])  # WSA方式启动
         elif DeviceUtils.is_uiautomator2_supported(self._serial):
-            self._app_start_uiautomator2()
+            self.u2.app_start(self._package)  # uiautomator2方式启动
         else:
-            self._app_start_adb()
-    
-    def _app_start_wsa(self) -> None:
-        """WSA方式启动应用"""
-        self.adb.shell(['am', 'start', '-n', f'{self._package}/.MainActivity'])
-    
-    def _app_start_uiautomator2(self) -> None:
-        """uiautomator2方式启动应用"""
-        self.u2.app_start(self._package)
-    
-    def _app_start_adb(self) -> None:
-        """ADB方式启动应用"""
-        self.adb.shell(['monkey', '-p', self._package, '-c', 'android.intent.category.LAUNCHER', '1'])
+            self.adb.shell(['monkey', '-p', self._package, '-c', 'android.intent.category.LAUNCHER', '1'])  # ADB方式启动
     
     def app_stop(self) -> None:
         """
-        停止目标应用。
-        根据不同的控制方法选择相应的停止实现。
+        停止目标应用程序。
+        
+        功能说明：
+        - 根据设备类型选择合适的停止方法
+        - 支持uiautomator2和原生ADB两种停止方式
+        - 使用force-stop命令确保应用完全停止
+        
+        异常说明：
+        - 当未设置目标应用包名时抛出异常
+        - 当设备未连接时可能抛出异常
+        
+        使用示例：
+            device_manager.package = "com.example.app"
+            device_manager.app_stop()
         """
-        if self._package is None:
+        if not self._package:
             raise Exception("未设置目标应用包名")
             
         logger.info(f'App stop: {self._package}')
         if DeviceUtils.is_uiautomator2_supported(self._serial):
-            self._app_stop_uiautomator2()
+            self.u2.app_stop(self._package)  # 使用uiautomator2的app_stop方法停止应用
         else:
-            self._app_stop_adb()
-    
-    def _app_stop_uiautomator2(self) -> None:
-        """uiautomator2方式停止应用"""
-        self.u2.app_stop(self._package)
-    
-    def _app_stop_adb(self) -> None:
-        """ADB方式停止应用"""
-        self.adb.shell(['am', 'force-stop', self._package])
+            self.adb.shell(['am', 'force-stop', self._package])  # 使用ADB的force-stop命令停止应用
     
     def hierarchy_timer_set(self, interval: Optional[float] = None) -> None:
         """
@@ -944,6 +957,23 @@ class DeviceManager:
         if self._hierarchy is None:
             self.dump_hierarchy()
         return HierarchyButton(self._hierarchy, xpath)
+
+    def screenshot(self):
+        """
+        获取屏幕截图。
+        
+        Returns:
+            np.ndarray: 屏幕截图数据
+            
+        Raises:
+            Exception: 未连接设备时抛出异常
+            ImageTruncated: 当图像数据无效时抛出
+        """
+        if self._serial is None:
+            raise Exception("未连接设备")
+            
+        data = self.adb.shell(['screencap', '-p'], stream=True)
+        return ImageUtils.load_screencap(data)
 
 
 # 创建全局设备管理器实例
