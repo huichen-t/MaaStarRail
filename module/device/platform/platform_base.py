@@ -5,10 +5,11 @@ from pydantic import BaseModel
 
 from module.base.decorator import cached_property, del_cached_property
 from module.base.utils import SelectedGrids
+from module.base.logger import logger
 from module.device.connection import Connection
 from module.device.method.utils import get_serial_pair
 from module.device.platform.emulator_base import EmulatorInstanceBase, EmulatorManagerBase, remove_duplicated_path
-from module.logger import logger
+
 
 
 class EmulatorInfo(BaseModel):

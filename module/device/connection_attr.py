@@ -5,15 +5,16 @@ import adbutils
 import uiautomator2 as u2
 from adbutils import AdbClient, AdbDevice
 
+from module.base.logger import logger
 from module.base.decorator import cached_property
-from module.config.config import AzurLaneConfig
+
 from module.device.method.utils import get_serial_pair
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+
 
 
 class ConnectionAttr:
-    config: AzurLaneConfig
+
     serial: str
 
     adb_binary_list = [
@@ -28,10 +29,7 @@ class ConnectionAttr:
             config (AzurLaneConfig, str): Name of the user config under ./config
         """
         logger.hr('Device', level=1)
-        if isinstance(config, str):
-            self.config = AzurLaneConfig(config, task=None)
-        else:
-            self.config = config
+        self.config = config
 
         # Init adb client
         logger.attr('AdbBinary', self.adb_binary)

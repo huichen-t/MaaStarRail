@@ -21,7 +21,7 @@ from module.exception import (
     GameTooManyClickError,
     RequestHumanTakeover
 )
-from module.logger import logger
+from module.base.logger import logger
 
 
 def show_function_call():
@@ -116,7 +116,7 @@ class Device(Screenshot, Control, AppControl):
         # Check resolution first
         self.resolution_check_uiautomator2()
         # Perform benchmark
-        from module.daemon.benchmark import Benchmark
+        from module.test.benchmark import Benchmark
         bench = Benchmark(config=self.config, device=self)
         method = bench.run_simple_screenshot_benchmark()
         # Set

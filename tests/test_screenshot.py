@@ -154,10 +154,11 @@ def main():
     """
     # 创建测试实例
     test = SimpleScreenshotTest()
-    
+    a = Device('src')
+    a.screenshot()
     # 运行测试
     results = test.run_all_tests()
-    
+
     # 打印结果
     print('\n测试结果:')
     print(f'截图文件: {results["screenshot"]}')

@@ -1,13 +1,18 @@
-from module.base.button import ClickButton
+import numpy as np
+
+
 from module.base.decorator import cached_property
 from module.base.timer import Timer
 from module.base.utils import *
+from module.base.logger import logger
+from module.base.utils.math_utils import random_rectangle_point
+from module.base.utils.str_utils import point2str
 from module.device.method.hermit import Hermit
 from module.device.method.maatouch import MaaTouch
 from module.device.method.minitouch import Minitouch
 from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
-from module.logger import logger
+
 
 
 class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
@@ -171,4 +176,4 @@ class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
             logger.warning(f'Control method {method} does not support drag well, '
                            f'falling back to ADB swipe may cause unexpected behaviour')
             self.swipe_adb(p1, p2, duration=ensure_time(swipe_duration * 2))
-            self.click(ClickButton(area=area_offset(point_random, p2), name=name))
+

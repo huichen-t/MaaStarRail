@@ -12,7 +12,7 @@ from module.device.method.adb import Adb
 from module.device.method.utils import (RETRY_TRIES, handle_unknown_host_service, retry_sleep,
                                         HierarchyButton, handle_adb_error)
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 class HermitError(Exception):

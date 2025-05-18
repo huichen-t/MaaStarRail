@@ -10,9 +10,10 @@ import uiautomator2 as u2
 from adbutils import AdbClient, AdbDevice, AdbTimeout, ForwardItem, ReverseItem
 from adbutils.errors import AdbError
 
-import module.config.server as server_
+import module.config.platform_config as platform_config
 from module.base.decorator import Config, cached_property, del_cached_property, run_once
 from module.base.timer import Timer
+from module.base.logger import logger
 from module.base.utils import SelectedGrids, ensure_time
 from module.device.connection_attr import ConnectionAttr
 from module.device.env import IS_LINUX, IS_MACINTOSH, IS_WINDOWS
@@ -20,7 +21,7 @@ from module.device.method.utils import (PackageNotInstalled, RETRY_TRIES, get_se
                                         handle_unknown_host_service, possible_reasons, random_port, recv_all,
                                         remove_shell_warning, retry_sleep)
 from module.exception import EmulatorNotRunningError, RequestHumanTakeover
-from module.logger import logger
+
 
 
 def retry(func):
@@ -118,18 +119,18 @@ class Connection(ConnectionAttr):
 
         # Package
         if self.config.is_cloud_game:
-            self.package = server_.to_package(self.config.Emulator_PackageName, is_cloud=True)
+            self.package = platform_config.to_package(self.config.Emulator_PackageName, is_cloud=True)
         elif self.config.Emulator_PackageName == 'auto':
             self.detect_package()
         else:
-            self.package = server_.to_package(self.config.Emulator_PackageName)
+            self.package = platform_config.to_package(self.config.Emulator_PackageName)
         # No set_server cause game client and UI language can be different
         # else:
         #     set_server(self.package)
         logger.attr('Server', self.config.Emulator_PackageName)
-        server_.server = self.config.Emulator_PackageName
+        platform_config.server = self.config.Emulator_PackageName
         logger.attr('PackageName', self.package)
-        server_.lang = self.config.Emulator_GameLanguage
+        platform_config.lang = self.config.Emulator_GameLanguage
         logger.attr('Lang', self.config.LANG)
 
         self.check_mumu_app_keep_alive()
@@ -1173,7 +1174,7 @@ class Connection(ConnectionAttr):
             list[str]: List of package names
         """
         packages = self.list_package(show_log=show_log)
-        packages = [p for p in packages if p in server_.VALID_PACKAGE or p in server_.VALID_CLOUD_PACKAGE]
+        packages = [p for p in packages if p in platform_config.VALID_PACKAGE or p in platform_config.VALID_CLOUD_PACKAGE]
         return packages
 
     def detect_package(self, set_config=True):
@@ -1203,8 +1204,8 @@ class Connection(ConnectionAttr):
             # Set config
             if set_config:
                 with self.config.multi_set():
-                    self.config.Emulator_PackageName = server_.to_server(self.package)
-                    if self.package in server_.VALID_CLOUD_PACKAGE:
+                    self.config.Emulator_PackageName = platform_config.to_server(self.package)
+                    if self.package in platform_config.VALID_CLOUD_PACKAGE:
                         if self.config.Emulator_GameClient != 'cloud_android':
                             self.config.Emulator_GameClient = 'cloud_android'
                     else:
@@ -1216,20 +1217,20 @@ class Connection(ConnectionAttr):
             return
         else:
             if self.config.is_cloud_game:
-                packages = [p for p in packages if p in server_.VALID_CLOUD_PACKAGE]
+                packages = [p for p in packages if p in platform_config.VALID_CLOUD_PACKAGE]
                 if len(packages) == 1:
                     logger.info('Auto package detection found only one package, using it')
                     self.package = packages[0]
                     if set_config:
-                        self.config.Emulator_PackageName = server_.to_server(self.package)
+                        self.config.Emulator_PackageName = platform_config.to_server(self.package)
                     return
             else:
-                packages = [p for p in packages if p in server_.VALID_PACKAGE]
+                packages = [p for p in packages if p in platform_config.VALID_PACKAGE]
                 if len(packages) == 1:
                     logger.info('Auto package detection found only one package, using it')
                     self.package = packages[0]
                     if set_config:
-                        self.config.Emulator_PackageName = server_.to_server(self.package)
+                        self.config.Emulator_PackageName = platform_config.to_server(self.package)
                     return
             logger.critical(
                 f'Multiple Star Rail packages found, auto package detection cannot decide which to choose, '

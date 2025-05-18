@@ -15,7 +15,7 @@ from module.device.method.scrcpy.control import ControlSender
 from module.device.method.scrcpy.options import ScrcpyOptions
 from module.device.method.utils import AdbConnection, recv_all
 from module.exception import RequestHumanTakeover
-from module.logger import logger
+from module.base.logger import logger
 
 
 class ScrcpyError(Exception):

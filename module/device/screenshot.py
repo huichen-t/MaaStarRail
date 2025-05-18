@@ -9,6 +9,7 @@ from PIL import Image
 
 from module.base.decorator import cached_property
 from module.base.timer import Timer
+from module.base.logger import logger
 from module.base.utils import get_color, image_size, limit_in, save_image
 from module.device.method.adb import Adb
 from module.device.method.ascreencap import AScreenCap
@@ -18,7 +19,7 @@ from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
 from module.device.method.wsa import WSA
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+
 
 
 class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):

@@ -48,13 +48,14 @@ except ImportError:
     adbutils._device.BaseDevice.shell = shell
 
 from module.base.decorator import cached_property
-from module.logger import logger
+from module.base.logger import logger
 
 RETRY_TRIES = 5
 RETRY_DELAY = 3
 
+
 # Patch uiautomator2 appdir
-u2.init.appdir = os.path.dirname(uiautomator2cache.__file__)
+# u2.config.set_cache_dir(os.path.dirname(uiautomator2cache.__file__))
 
 # Patch uiautomator2 logger
 u2_logger = u2.logger
@@ -70,11 +71,11 @@ def setup_logger(*args, **kwargs):
 
 
 u2.setup_logger = setup_logger
-u2.init.setup_logger = setup_logger
+
 
 
 # Patch Initer
-class PatchedIniter(u2.init.Initer):
+class PatchedIniter():
     @property
     def atx_agent_url(self):
         files = {
@@ -102,7 +103,7 @@ class PatchedIniter(u2.init.Initer):
         return []
 
 
-u2.init.Initer = PatchedIniter
+u2.Initer = PatchedIniter
 
 
 def is_port_using(port_num):
@@ -355,7 +356,7 @@ def remove_shell_warning(s):
     return s
 
 
-class IniterNoMinicap(u2.init.Initer):
+class IniterNoMinicap():
     @property
     def minicap_urls(self):
         """
@@ -376,7 +377,7 @@ class Device(u2.Device):
 
 
 # Monkey patch
-u2.init.Initer = IniterNoMinicap
+u2.Initer = IniterNoMinicap
 u2.Device = Device
 
 

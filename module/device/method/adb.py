@@ -8,12 +8,12 @@ from adbutils.errors import AdbError
 from lxml import etree
 
 from module.base.decorator import Config
-from module.config.server import DICT_PACKAGE_TO_ACTIVITY
-from module.device.connection import Connection
+from module.config.platform_config import DICT_PACKAGE_TO_ACTIVITY
+
 from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, remove_prefix, retry_sleep)
 from module.exception import RequestHumanTakeover, ScriptError
-from module.logger import logger
+from module.base.logger import logger
 
 
 def retry(func):
@@ -105,7 +105,7 @@ def load_screencap(data):
     return image
 
 
-class Adb(Connection):
+class Adb():
     __screenshot_method = [0, 1, 2]
     __screenshot_method_fixed = [0, 1, 2]
 
